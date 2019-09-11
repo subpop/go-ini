@@ -1,8 +1,6 @@
 package ini
 
 import (
-	"fmt"
-	"log"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -61,27 +59,4 @@ func TestUnmarshal(t *testing.T) {
 			t.Errorf("%v != %v", got, test.want)
 		}
 	}
-}
-
-func ExampleUnmarshal() {
-	type GitConfig struct {
-		User struct {
-			Email string `ini:"email"`
-			Name  string `ini:"name"`
-		} `ini:"user"`
-	}
-
-	gitconfig := `
-	[user]
-		email = gopher@golang.org
-		name = Gopher
-	`
-
-	var gitCfg GitConfig
-	if err := Unmarshal([]byte(gitconfig), &gitCfg); err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(gitCfg.User)
-
-	// Output: {gopher@golang.org Gopher}
 }
