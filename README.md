@@ -1,28 +1,26 @@
-# About
+# go-ini
 
-`go-ini` is an INI-file codec package for Go. It mimics the Marshal/Unmarshal
-pattern set forth by the `encoding/json` and `encoding/xml` packages. It borrows
-heavily from the `encoding/json` package implementation.
+[![GoDoc](https://godoc.org/github.com/subpop/go-ini?status.svg)](https://godoc.org/github.com/subpop/go-ini)
+
+A Go package that encodes and decodes INI-files.
 
 # Usage
 
 ```go
-	type GitConfig struct {
-		User struct {
-			Email string `ini:"email"`
-			Name  string `ini:"name"`
-		} `ini:"user"`
-	}
+data := `[settings]
+username=root
+password=swordfish
+`
 
-	gitconfig := `
-	[user]
-		email = gopher@golang.org
-		name = Gopher
-	`
+var config struct {
+    Settings struct {
+        Username string `ini:"username"`
+        Password string `ini:"password"`
+    } `ini:"settings"`
+}
 
-	var gitCfg GitConfig
-	if err := Unmarshal([]byte(gitconfig), &gitCfg); err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(gitCfg.User)
+if err := ini.Unmarshal(data, &config); err != nil {
+    fmt.Println(err)
+}
+fmt.Println(config)
 ```
