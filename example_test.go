@@ -2,52 +2,95 @@ package ini_test
 
 import (
 	"fmt"
-	"log"
+	"os"
 
 	"github.com/subpop/go-ini"
 )
 
-type user struct {
-	Email string `ini:"email"`
-	Name  string `ini:"name"`
-}
-
-type gitConfig struct {
-	User user `ini:"user"`
-}
-
-func ExampleUnmarshal() {
-	gitconfig := `
-	[user]
-		email = gopher@golang.org
-		name = Gopher
-	`
-
-	var gitCfg gitConfig
-	if err := ini.Unmarshal([]byte(gitconfig), &gitCfg); err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(gitCfg.User)
-
-	// Output: {gopher@golang.org Gopher}
-}
-
 func ExampleMarshal() {
-	gitCfg := gitConfig{
-		User: user{
-			Name:  "Gopher",
-			Email: "gopher@golang.org",
+	type Database struct {
+		Server string
+		Port   int
+		File   string
+	}
+
+	type Person struct {
+		Name         string
+		Organization string
+	}
+
+	type Config struct {
+		Version  string
+		Owner    Person
+		Database Database
+	}
+
+	config := Config{
+		Version: "1.2.3",
+		Owner: Person{
+			Name:         "John Doe",
+			Organization: "Acme Widgets Inc.",
+		},
+		Database: Database{
+			Server: "192.0.2.62",
+			Port:   143,
+			File:   "payroll.dat",
 		},
 	}
 
-	data, err := ini.Marshal(&gitCfg)
+	b, err := ini.Marshal(config)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("error:", err)
 	}
-	fmt.Println(string(data))
-
+	os.Stdout.Write(b)
 	// Output:
-	// [user]
-	// email=gopher@golang.org
-	// name=Gopher
+	// Version=1.2.3
+	//
+	// [Owner]
+	// Name=John Doe
+	// Organization=Acme Widgets Inc.
+	//
+	// [Database]
+	// Server=192.0.2.62
+	// Port=143
+	// File=payroll.dat
+}
+
+func ExampleUnmarshal() {
+	type Database struct {
+		Server string
+		Port   int
+		File   string
+	}
+
+	type Person struct {
+		Name         string
+		Organization string
+	}
+
+	type Config struct {
+		Version  string
+		Owner    Person
+		Database Database
+	}
+
+	var config Config
+
+	data := []byte(`Version=1.2.3
+
+	[Owner]
+	Name=John Doe
+	Organization=Acme Widgets Inc.
+	
+	[Database]
+	Server=192.0.2.62
+	Port=143
+	File=payroll.dat`)
+
+	if err := ini.Unmarshal(data, &config); err != nil {
+		fmt.Println("error:", err)
+	}
+	fmt.Println(config)
+	// Output:
+	// {1.2.3 {John Doe Acme Widgets Inc.} {192.0.2.62 143 payroll.dat}}
 }
