@@ -7,41 +7,36 @@ import (
 )
 
 func TestUnmarshal(t *testing.T) {
+	type database struct {
+		Server    string
+		Port      int
+		Encrypted bool
+	}
+
 	tests := []struct {
 		input []byte
-		want  config
+		want  struct {
+			Database database
+		}
 	}{
 		{
-			input: []byte(`
-version=1.2.3
-
-[owner]
-name=John Doe
-organization=Acme Widgets Inc.
-
-[database]
-server=192.0.2.62
-port=143
-file="payroll.dat"
-enabled=true`),
-			want: config{
-				Version: "1.2.3",
-				Owner: owner{
-					Name:         "John Doe",
-					Organization: "Acme Widgets Inc.",
-				},
+			input: []byte("[Database]\nServer=192.0.2.62\nPort=143\nEncrypted=false"),
+			want: struct {
+				Database database
+			}{
 				Database: database{
-					Server:  "192.0.2.62",
-					Port:    143,
-					File:    "\"payroll.dat\"",
-					Enabled: true,
+					Server:    "192.0.2.62",
+					Port:      143,
+					Encrypted: false,
 				},
 			},
 		},
 	}
 
 	for _, test := range tests {
-		var got config
+		var got struct {
+			Database database
+		}
 		if err := Unmarshal(test.input, &got); err != nil {
 			t.Fatal(err)
 		}
