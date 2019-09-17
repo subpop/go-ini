@@ -6,55 +6,43 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-type advanced struct {
-	Name    string `ini:"name"`
-	Age     int    `ini:"age"`
-	Address struct {
-		Street string `ini:"street"`
-		City   string `ini:"city"`
-		State  string `ini:"state"`
-		ZIP    string `ini:"zip"`
-	} `ini:"address"`
-}
-
 func TestUnmarshal(t *testing.T) {
 	tests := []struct {
-		input string
-		want  advanced
+		input []byte
+		want  config
 	}{
 		{
-			input: `name=Rupert
-			age=23
-			
-			[address]
-			street=123 Main St.
-			city=Boston
-			state=Massachusetts
-			zip=02108`,
-			want: advanced{
-				Name: "Rupert",
-				Age:  23,
-				Address: struct {
-					Street string `ini:"street"`
-					City   string `ini:"city"`
-					State  string `ini:"state"`
-					ZIP    string `ini:"zip"`
-				}{
-					Street: "123 Main St.",
-					City:   "Boston",
-					State:  "Massachusetts",
-					ZIP:    "02108",
+			input: []byte(`
+version=1.2.3
+
+[owner]
+name=John Doe
+organization=Acme Widgets Inc.
+
+[database]
+server=192.0.2.62
+port=143
+file="payroll.dat"`),
+			want: config{
+				Version: "1.2.3",
+				Owner: owner{
+					Name:         "John Doe",
+					Organization: "Acme Widgets Inc.",
+				},
+				Database: database{
+					Server: "192.0.2.62",
+					Port:   143,
+					File:   "\"payroll.dat\"",
 				},
 			},
 		},
 	}
 
 	for _, test := range tests {
-		var got advanced
-		if err := Unmarshal([]byte(test.input), &got); err != nil {
-			t.Error(err)
+		var got config
+		if err := Unmarshal(test.input, &got); err != nil {
+			t.Fatal(err)
 		}
-
 		if !cmp.Equal(got, test.want) {
 			t.Errorf("%v != %v", got, test.want)
 		}
