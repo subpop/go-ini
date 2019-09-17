@@ -170,6 +170,18 @@ func encode(buf *bytes.Buffer, v reflect.Value) error {
 		}); err != nil {
 			return err
 		}
+	case reflect.Bool:
+		if err := encodeTextMarshaler(buf, v, func() {
+			var s string
+			if v.Bool() {
+				s = "true"
+			} else {
+				s = "false"
+			}
+			buf.WriteString(s)
+		}); err != nil {
+			return err
+		}
 	default:
 		return &UnsupportedValueError{v}
 	}

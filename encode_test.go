@@ -11,9 +11,10 @@ type owner struct {
 	Organization string `ini:"organization"`
 }
 type database struct {
-	Server string `ini:"server"`
-	Port   int    `ini:"port"`
-	File   string `ini:"file"`
+	Server  string `ini:"server"`
+	Port    int    `ini:"port"`
+	File    string `ini:"file"`
+	Enabled bool   `ini:"enabled,omitempty"`
 }
 
 type config struct {
