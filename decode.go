@@ -32,6 +32,9 @@ func (e *InvalidUnmarshalError) Error() string {
 // To unmarshal a property into an int, int64, uint, or uint64, the value must
 // successfully parse (via strconv.Parse*) to a number.
 //
+// To unmarshal a property into a bool, the value must be a literal "true" or
+// "false".
+//
 // To unmarshal a property into a string, a direct string value is copied.
 func Unmarshal(data []byte, v interface{}) error {
 	rv := reflect.ValueOf(v)
@@ -69,6 +72,9 @@ func decode(p *parser, v reflect.Value, st string) error {
 				return err
 			}
 			sv.SetInt(n)
+		case reflect.Bool:
+			sv := v.Field(i)
+			sv.SetBool(p.ast[st].props[tag].val[0] == "true")
 		case reflect.Struct:
 			sv := v.Field(i)
 			if err := decode(p, sv, tag); err != nil {

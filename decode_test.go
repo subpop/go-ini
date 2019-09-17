@@ -22,7 +22,8 @@ organization=Acme Widgets Inc.
 [database]
 server=192.0.2.62
 port=143
-file="payroll.dat"`),
+file="payroll.dat"
+enabled=true`),
 			want: config{
 				Version: "1.2.3",
 				Owner: owner{
@@ -30,9 +31,10 @@ file="payroll.dat"`),
 					Organization: "Acme Widgets Inc.",
 				},
 				Database: database{
-					Server: "192.0.2.62",
-					Port:   143,
-					File:   "\"payroll.dat\"",
+					Server:  "192.0.2.62",
+					Port:    143,
+					File:    "\"payroll.dat\"",
+					Enabled: true,
 				},
 			},
 		},
