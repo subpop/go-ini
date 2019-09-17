@@ -21,6 +21,9 @@ func (e *InvalidUnmarshalError) Error() string {
 	return "ini: Unmarshal(nil " + e.Type.String() + ")"
 }
 
+// Unmarshal parses the INI data and stores the result in the value pointed to
+// by v. If v is nil or not a pointer to a struct, Unmarshal returns an
+// error.
 func Unmarshal(data []byte, v interface{}) error {
 	rv := reflect.ValueOf(v)
 	if rv.Kind() != reflect.Ptr || rv.IsNil() {
