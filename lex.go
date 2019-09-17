@@ -133,7 +133,7 @@ func lexStart(l *lexer) stateFunc {
 		return lexComment
 	case r == '[':
 		return lexSection
-	case r == '\n':
+	case r == '\n', r == '\t', r == ' ':
 		l.ignore()
 		return lexStart
 	case r == eof:
