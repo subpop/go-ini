@@ -178,10 +178,9 @@ func encode(buf *bytes.Buffer, v reflect.Value) error {
 }
 
 func key(sf reflect.StructField) (tag string, tagOpts map[string]bool) {
+	tag = sf.Name
 	tags := strings.Split(sf.Tag.Get("ini"), ",")
-	if len(tags) == 0 {
-		tag = strings.ToLower(sf.Name)
-	} else {
+	if tags[0] != "" {
 		tag = tags[0]
 	}
 	tagOpts = make(map[string]bool)
