@@ -238,7 +238,8 @@ func TestDecode(t *testing.T) {
 		Groups []string `ini:"group"`
 	}
 	type config struct {
-		User user `ini:"user"`
+		User    user     `ini:"user"`
+		Sources []string `ini:"source"`
 	}
 
 	tests := []struct {
@@ -247,6 +248,15 @@ func TestDecode(t *testing.T) {
 	}{
 		{
 			input: map[string]section{
+				"": section{
+					name: "",
+					props: map[string]property{
+						"source": property{
+							key: "source",
+							val: []string{"passwd", "ldap"},
+						},
+					},
+				},
 				"user": section{
 					name: "user",
 					props: map[string]property{
@@ -271,6 +281,7 @@ func TestDecode(t *testing.T) {
 					UID:    42,
 					Groups: []string{"wheel", "video"},
 				},
+				Sources: []string{"passwd", "ldap"},
 			},
 		},
 	}

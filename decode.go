@@ -58,6 +58,12 @@ func decode(ast map[string]section, rv reflect.Value) error {
 			if err := decodeStruct(val, sv); err != nil {
 				return err
 			}
+		case reflect.Slice:
+			sv := rv.Field(i).Addr()
+			val := ast[""].props[t.name]
+			if err := decodeSlice(val, sv); err != nil {
+				return err
+			}
 		case reflect.String:
 			sv := rv.Field(i).Addr()
 			val := ast[""].props[t.name].val[0]
