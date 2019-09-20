@@ -36,7 +36,7 @@ func Unmarshal(data []byte, v interface{}) error {
 
 // decode sets the underlying values of the value to which rv points to the
 // concrete value stored in the corresponding field of ast.
-func decode(ast map[string]section, rv reflect.Value) error {
+func decode(ast ast, rv reflect.Value) error {
 	if rv.Type().Kind() != reflect.Ptr {
 		return &UnmarshalTypeError{
 			Value: reflect.ValueOf(ast).String(),
@@ -63,25 +63,25 @@ func decode(ast map[string]section, rv reflect.Value) error {
 		switch sf.Type.Kind() {
 		case reflect.Struct:
 			sv := rv.Field(i).Addr()
-			val := ast[t.name]
+			val := ast[t.name][0]
 			if err := decodeStruct(val, sv); err != nil {
 				return err
 			}
 		case reflect.Slice:
 			sv := rv.Field(i).Addr()
-			val := ast[""].props[t.name]
+			val := ast[""][0].props[t.name]
 			if err := decodeSlice(val, sv); err != nil {
 				return err
 			}
 		case reflect.String:
 			sv := rv.Field(i).Addr()
-			val := ast[""].props[t.name].val[0]
+			val := ast[""][0].props[t.name].val[0]
 			if err := decodeString(val, sv); err != nil {
 				return err
 			}
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			sv := rv.Field(i).Addr()
-			val := ast[""].props[t.name].val[0]
+			val := ast[""][0].props[t.name].val[0]
 			if err := decodeInt(val, sv); err != nil {
 				return err
 			}

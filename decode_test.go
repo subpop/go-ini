@@ -243,34 +243,38 @@ func TestDecode(t *testing.T) {
 	}
 
 	tests := []struct {
-		input map[string]section
+		input ast
 		want  config
 	}{
 		{
-			input: map[string]section{
-				"": section{
-					name: "",
-					props: map[string]property{
-						"source": property{
-							key: "source",
-							val: []string{"passwd", "ldap"},
+			input: ast{
+				"": []section{
+					section{
+						name: "",
+						props: map[string]property{
+							"source": property{
+								key: "source",
+								val: []string{"passwd", "ldap"},
+							},
 						},
 					},
 				},
-				"user": section{
-					name: "user",
-					props: map[string]property{
-						"shell": property{
-							key: "shell",
-							val: []string{"/bin/bash"},
-						},
-						"uid": property{
-							key: "uid",
-							val: []string{"42"},
-						},
-						"group": property{
-							key: "group",
-							val: []string{"wheel", "video"},
+				"user": []section{
+					section{
+						name: "user",
+						props: map[string]property{
+							"shell": property{
+								key: "shell",
+								val: []string{"/bin/bash"},
+							},
+							"uid": property{
+								key: "uid",
+								val: []string{"42"},
+							},
+							"group": property{
+								key: "group",
+								val: []string{"wheel", "video"},
+							},
 						},
 					},
 				},
