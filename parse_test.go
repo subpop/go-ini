@@ -9,30 +9,34 @@ import (
 func TestParse(t *testing.T) {
 	tests := []struct {
 		input string
-		want  map[string]section
+		want  ast
 	}{
 		{
 			input: "version=1.2.3\n\n[user]\nname=root\nshell=/bin/bash",
-			want: map[string]section{
-				"": section{
-					name: "",
-					props: map[string]property{
-						"version": property{
-							key: "version",
-							val: []string{"1.2.3"},
+			want: ast{
+				"": []section{
+					section{
+						name: "",
+						props: map[string]property{
+							"version": property{
+								key: "version",
+								val: []string{"1.2.3"},
+							},
 						},
 					},
 				},
-				"user": section{
-					name: "user",
-					props: map[string]property{
-						"name": property{
-							key: "name",
-							val: []string{"root"},
-						},
-						"shell": property{
-							key: "shell",
-							val: []string{"/bin/bash"},
+				"user": []section{
+					section{
+						name: "user",
+						props: map[string]property{
+							"name": property{
+								key: "name",
+								val: []string{"root"},
+							},
+							"shell": property{
+								key: "shell",
+								val: []string{"/bin/bash"},
+							},
 						},
 					},
 				},
@@ -50,43 +54,49 @@ organization=Acme Widgets Inc.
 server=192.0.2.62
 port=143
 file="payroll.dat"`,
-			want: map[string]section{
-				"": section{
-					name: "",
-					props: map[string]property{
-						"version": property{
-							key: "version",
-							val: []string{"1.2.3"},
+			want: ast{
+				"": []section{
+					section{
+						name: "",
+						props: map[string]property{
+							"version": property{
+								key: "version",
+								val: []string{"1.2.3"},
+							},
 						},
 					},
 				},
-				"owner": section{
-					name: "owner",
-					props: map[string]property{
-						"name": property{
-							key: "name",
-							val: []string{"John Doe"},
-						},
-						"organization": property{
-							key: "organization",
-							val: []string{"Acme Widgets Inc."},
+				"owner": []section{
+					section{
+						name: "owner",
+						props: map[string]property{
+							"name": property{
+								key: "name",
+								val: []string{"John Doe"},
+							},
+							"organization": property{
+								key: "organization",
+								val: []string{"Acme Widgets Inc."},
+							},
 						},
 					},
 				},
-				"database": section{
-					name: "database",
-					props: map[string]property{
-						"server": property{
-							key: "server",
-							val: []string{"192.0.2.62"},
-						},
-						"port": property{
-							key: "port",
-							val: []string{"143"},
-						},
-						"file": property{
-							key: "file",
-							val: []string{`"payroll.dat"`},
+				"database": []section{
+					section{
+						name: "database",
+						props: map[string]property{
+							"server": property{
+								key: "server",
+								val: []string{"192.0.2.62"},
+							},
+							"port": property{
+								key: "port",
+								val: []string{"143"},
+							},
+							"file": property{
+								key: "file",
+								val: []string{`"payroll.dat"`},
+							},
 						},
 					},
 				},

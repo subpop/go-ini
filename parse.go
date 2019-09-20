@@ -15,20 +15,15 @@ func (e *errParse) Error() string {
 }
 
 type parser struct {
-	ast map[string]section
+	ast ast
 	l   *lexer
 	tok token
 }
 
 func newParser(data []byte) *parser {
 	p := parser{
-		ast: map[string]section{
-			"": section{
-				name:  "",
-				props: map[string]property{},
-			},
-		},
-		l: lex(string(data)),
+		ast: newAST(),
+		l:   lex(string(data)),
 	}
 	return &p
 }
@@ -49,31 +44,17 @@ func (p *parser) parse() error {
 		case tokenError:
 			return &errParse{p.l.line, p.l.col, p.tok.val}
 		case tokenSection:
-			var sec section
-			sec, ok := p.ast[p.tok.val]
-			if !ok {
-				sec = section{
-					name:  p.tok.val,
-					props: map[string]property{},
-				}
-			}
+			sec := newSection(p.tok.val)
 			if err := p.parseSection(&sec); err != nil {
 				return err
 			}
-			p.ast[sec.name] = sec
+			p.ast.addSection(sec)
 		case tokenKey:
-			var prop property
-			prop, ok := p.ast[""].props[p.tok.val]
-			if !ok {
-				prop = property{
-					key: p.tok.val,
-					val: []string{},
-				}
-			}
+			prop := newProperty(p.tok.val)
 			if err := p.parseProperty(&prop); err != nil {
 				return err
 			}
-			p.ast[""].props[prop.key] = prop
+			p.ast[""][0].addProperty(prop)
 		}
 	}
 }
@@ -96,31 +77,17 @@ func (p *parser) parseSection(out *section) error {
 		case tokenError:
 			return &errParse{p.l.line, p.l.col, p.tok.val}
 		case tokenKey:
-			var prop property
-			prop, ok := out.props[p.tok.val]
-			if !ok {
-				prop = property{
-					key: p.tok.val,
-					val: []string{},
-				}
-			}
+			prop := newProperty(p.tok.val)
 			if err := p.parseProperty(&prop); err != nil {
 				return err
 			}
-			out.props[prop.key] = prop
+			out.addProperty(prop)
 		case tokenSection:
-			var sec section
-			sec, ok := p.ast[p.tok.val]
-			if !ok {
-				sec = section{
-					name:  p.tok.val,
-					props: map[string]property{},
-				}
-			}
+			sec := newSection(p.tok.val)
 			if err := p.parseSection(&sec); err != nil {
 				return err
 			}
-			p.ast[sec.name] = sec
+			p.ast.addSection(sec)
 		default:
 			return nil
 		}
