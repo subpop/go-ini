@@ -14,16 +14,6 @@ func (e *errParse) Error() string {
 	return fmt.Sprintf("parse:%v:%v: %v", e.line, e.col, e.s)
 }
 
-type section struct {
-	name  string
-	props map[string]property
-}
-
-type property struct {
-	key string
-	val []string
-}
-
 type parser struct {
 	ast map[string]section
 	l   *lexer
