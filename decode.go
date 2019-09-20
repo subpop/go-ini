@@ -22,6 +22,15 @@ func (e *UnmarshalTypeError) Error() string {
 }
 
 func Unmarshal(data []byte, v interface{}) error {
+	p := newParser(data)
+	if err := p.parse(); err != nil {
+		return err
+	}
+
+	if err := decode(p.ast, reflect.ValueOf(v)); err != nil {
+		return err
+	}
+
 	return nil
 }
 

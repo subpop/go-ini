@@ -301,3 +301,49 @@ func TestDecode(t *testing.T) {
 		}
 	}
 }
+
+func TestUnmarshal(t *testing.T) {
+	type user struct {
+		Shell  string   `ini:"shell"`
+		UID    int      `ini:"uid"`
+		Groups []string `ini:"group"`
+	}
+	type config struct {
+		User    user     `ini:"user"`
+		Sources []string `ini:"source"`
+	}
+
+	tests := []struct {
+		input string
+		want  config
+	}{
+		{
+			input: `source=passwd
+[user]
+shell=/bin/bash
+uid=1000
+group=wheel
+group=video`,
+			want: config{
+				Sources: []string{"passwd"},
+				User: user{
+					Shell:  "/bin/bash",
+					UID:    1000,
+					Groups: []string{"wheel", "video"},
+				},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		var got config
+		err := Unmarshal([]byte(test.input), &got)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if !cmp.Equal(got, test.want) {
+			t.Errorf("%v != %v", got, test.want)
+		}
+	}
+}
