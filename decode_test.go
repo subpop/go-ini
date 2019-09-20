@@ -233,8 +233,9 @@ func TestDecodeSlice(t *testing.T) {
 
 func TestDecode(t *testing.T) {
 	type user struct {
-		Shell string `ini:"shell"`
-		UID   int    `ini:"uid"`
+		Shell  string   `ini:"shell"`
+		UID    int      `ini:"uid"`
+		Groups []string `ini:"group"`
 	}
 	type config struct {
 		User user `ini:"user"`
@@ -257,13 +258,18 @@ func TestDecode(t *testing.T) {
 							key: "uid",
 							val: []string{"42"},
 						},
+						"group": property{
+							key: "group",
+							val: []string{"wheel", "video"},
+						},
 					},
 				},
 			},
 			want: config{
 				User: user{
-					Shell: "/bin/bash",
-					UID:   42,
+					Shell:  "/bin/bash",
+					UID:    42,
+					Groups: []string{"wheel", "video"},
 				},
 			},
 		},
@@ -279,7 +285,7 @@ func TestDecode(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if got != test.want {
+		if !cmp.Equal(got, test.want) {
 			t.Errorf("%v != %v", got, test.want)
 		}
 	}
