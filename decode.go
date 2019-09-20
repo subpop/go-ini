@@ -118,6 +118,48 @@ func decodeStruct(i interface{}, rv reflect.Value) error {
 	return nil
 }
 
+// decodeSlice sets the underlying values of the elements of the value to which
+// rv points to the concrete values stored in i.
+func decodeSlice(i interface{}, rv reflect.Value) error {
+	if reflect.TypeOf(i) != reflect.TypeOf(property{}) || rv.Type().Kind() != reflect.Ptr {
+		return &UnmarshalTypeError{
+			Value: reflect.ValueOf(i).String(),
+			Type:  rv.Type(),
+		}
+	}
+
+	p := i.(property)
+	rv = rv.Elem()
+
+	var decoderFunc func(interface{}, reflect.Value) error
+
+	switch rv.Type().Elem().Kind() {
+	case reflect.String:
+		decoderFunc = decodeString
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		decoderFunc = decodeInt
+	default:
+		return &UnmarshalTypeError{
+			Value: reflect.ValueOf(i).String(),
+			Type:  rv.Type(),
+		}
+	}
+
+	vv := reflect.MakeSlice(rv.Type(), len(p.val), cap(p.val))
+
+	for i := 0; i < vv.Len(); i++ {
+		sv := vv.Index(i).Addr()
+		val := p.val[i]
+		if err := decoderFunc(val, sv); err != nil {
+			return err
+		}
+	}
+
+	rv.Set(vv)
+
+	return nil
+}
+
 // decodeString sets the underlying value of the value to which rv points to
 // the concrete value stored in i. If rv is not a reflect.Ptr, decodeString
 // returns UnmarshalTypeError.
