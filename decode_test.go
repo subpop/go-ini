@@ -95,8 +95,9 @@ func TestDecodeInt(t *testing.T) {
 
 func TestDecodeStruct(t *testing.T) {
 	type user struct {
-		Shell string `ini:"shell"`
-		UID   int    `ini:"uid"`
+		Shell  string   `ini:"shell"`
+		UID    int      `ini:"uid"`
+		Groups []string `ini:"group"`
 	}
 	tests := []struct {
 		input       section
@@ -116,11 +117,16 @@ func TestDecodeStruct(t *testing.T) {
 						key: "uid",
 						val: []string{"1000"},
 					},
+					"group": property{
+						key: "group",
+						val: []string{"wheel", "video"},
+					},
 				},
 			},
 			want: user{
-				Shell: "/bin/bash",
-				UID:   1000,
+				Shell:  "/bin/bash",
+				UID:    1000,
+				Groups: []string{"wheel", "video"},
 			},
 		},
 	}
@@ -139,7 +145,7 @@ func TestDecodeStruct(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if got != test.want {
+			if !cmp.Equal(got, test.want) {
 				t.Errorf("%v != %v", got, test.want)
 			}
 		}

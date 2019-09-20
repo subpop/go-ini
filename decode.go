@@ -100,6 +100,12 @@ func decodeStruct(i interface{}, rv reflect.Value) error {
 		}
 
 		switch sf.Type.Kind() {
+		case reflect.Slice:
+			sv := rv.Field(i).Addr()
+			val := s.props[t.name]
+			if err := decodeSlice(val, sv); err != nil {
+				return err
+			}
 		case reflect.String:
 			sv := rv.Field(i).Addr()
 			val := s.props[t.name].val[0]
