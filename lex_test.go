@@ -10,12 +10,19 @@ func TestLexer(t *testing.T) {
 		want  []token
 	}{
 		{
-			input: "[user]\nname=root\nshell=/bin/bash\n\n[group]\nname=wheel",
+			input: "[user]\nname=root\nshell=/bin/bash\n\n[user]\nname=admin\nshell=/bin/bash\n\n[group]\nname=wheel",
 			want: []token{
 				{typ: tokenSection, val: "user"},
 				{typ: tokenKey, val: "name"},
 				{typ: tokenAssignment, val: "="},
 				{typ: tokenText, val: "root"},
+				{typ: tokenKey, val: "shell"},
+				{typ: tokenAssignment, val: "="},
+				{typ: tokenText, val: "/bin/bash"},
+				{typ: tokenSection, val: "user"},
+				{typ: tokenKey, val: "name"},
+				{typ: tokenAssignment, val: "="},
+				{typ: tokenText, val: "admin"},
 				{typ: tokenKey, val: "shell"},
 				{typ: tokenAssignment, val: "="},
 				{typ: tokenText, val: "/bin/bash"},
