@@ -69,7 +69,13 @@ func decode(ast ast, rv reflect.Value) error {
 			}
 		case reflect.Slice:
 			sv := rv.Field(i).Addr()
-			val := ast[""][0].props[t.name]
+			var val interface{}
+			switch sf.Type.Elem().Kind() {
+			case reflect.Struct:
+				val = ast[t.name]
+			default:
+				val = ast[""][0].props[t.name].val
+			}
 			if err := decodeSlice(val, sv); err != nil {
 				return err
 			}
@@ -117,7 +123,7 @@ func decodeStruct(i interface{}, rv reflect.Value) error {
 		switch sf.Type.Kind() {
 		case reflect.Slice:
 			sv := rv.Field(i).Addr()
-			val := s.props[t.name]
+			val := s.props[t.name].val
 			if err := decodeSlice(val, sv); err != nil {
 				return err
 			}
@@ -141,15 +147,14 @@ func decodeStruct(i interface{}, rv reflect.Value) error {
 
 // decodeSlice sets the underlying values of the elements of the value to which
 // rv points to the concrete values stored in i.
-func decodeSlice(i interface{}, rv reflect.Value) error {
-	if reflect.TypeOf(i) != reflect.TypeOf(property{}) || rv.Type().Kind() != reflect.Ptr {
+func decodeSlice(v interface{}, rv reflect.Value) error {
+	if reflect.TypeOf(v).Kind() != reflect.Slice || rv.Type().Kind() != reflect.Ptr {
 		return &UnmarshalTypeError{
-			Value: reflect.ValueOf(i).String(),
+			Value: reflect.ValueOf(v).String(),
 			Type:  rv.Type(),
 		}
 	}
 
-	p := i.(property)
 	rv = rv.Elem()
 
 	var decoderFunc func(interface{}, reflect.Value) error
@@ -159,18 +164,20 @@ func decodeSlice(i interface{}, rv reflect.Value) error {
 		decoderFunc = decodeString
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		decoderFunc = decodeInt
+	case reflect.Struct:
+		decoderFunc = decodeStruct
 	default:
 		return &UnmarshalTypeError{
-			Value: reflect.ValueOf(i).String(),
+			Value: reflect.ValueOf(v).String(),
 			Type:  rv.Type(),
 		}
 	}
 
-	vv := reflect.MakeSlice(rv.Type(), len(p.val), cap(p.val))
+	vv := reflect.MakeSlice(rv.Type(), reflect.ValueOf(v).Len(), reflect.ValueOf(v).Cap())
 
 	for i := 0; i < vv.Len(); i++ {
 		sv := vv.Index(i).Addr()
-		val := p.val[i]
+		val := reflect.ValueOf(v).Index(i).Interface()
 		if err := decoderFunc(val, sv); err != nil {
 			return err
 		}

@@ -154,7 +154,7 @@ func TestDecodeStruct(t *testing.T) {
 
 func TestDecodeSlice(t *testing.T) {
 	var tests []struct {
-		input       property
+		input       interface{}
 		want        interface{}
 		shouldError bool
 		wantError   error
@@ -162,7 +162,7 @@ func TestDecodeSlice(t *testing.T) {
 
 	/*** []string tests ***/
 	tests = []struct {
-		input       property
+		input       interface{}
 		want        interface{}
 		shouldError bool
 		wantError   error
@@ -179,7 +179,7 @@ func TestDecodeSlice(t *testing.T) {
 	for _, test := range tests {
 		var got []string
 
-		err := decodeSlice(test.input, reflect.ValueOf(&got))
+		err := decodeSlice(test.input.(property).val, reflect.ValueOf(&got))
 
 		if test.shouldError {
 			if !reflect.DeepEqual(err, test.wantError) {
@@ -197,7 +197,7 @@ func TestDecodeSlice(t *testing.T) {
 
 	/*** []int tests ***/
 	tests = []struct {
-		input       property
+		input       interface{}
 		want        interface{}
 		shouldError bool
 		wantError   error
@@ -214,7 +214,79 @@ func TestDecodeSlice(t *testing.T) {
 	for _, test := range tests {
 		var got []int
 
-		err := decodeSlice(test.input, reflect.ValueOf(&got))
+		err := decodeSlice(test.input.(property).val, reflect.ValueOf(&got))
+
+		if test.shouldError {
+			if !reflect.DeepEqual(err, test.wantError) {
+				t.Errorf("%v != %v", err, test.wantError)
+			}
+		} else {
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !cmp.Equal(got, test.want) {
+				t.Errorf("%v != %v", got, test.want)
+			}
+		}
+	}
+
+	/*** []struct tests ***/
+	type user struct {
+		Name  string `ini:"name"`
+		Shell string `ini:"shell"`
+	}
+	tests = []struct {
+		input       interface{}
+		want        interface{}
+		shouldError bool
+		wantError   error
+	}{
+		{
+			input: []section{
+				{
+					name: "user",
+					props: map[string]property{
+						"name": property{
+							key: "name",
+							val: []string{"root"},
+						},
+						"shell": property{
+							key: "shell",
+							val: []string{"/bin/bash"},
+						},
+					},
+				},
+				{
+					name: "user",
+					props: map[string]property{
+						"name": property{
+							key: "name",
+							val: []string{"admin"},
+						},
+						"shell": property{
+							key: "shell",
+							val: []string{"/bin/zsh"},
+						},
+					},
+				},
+			},
+			want: []user{
+				user{
+					Name:  "root",
+					Shell: "/bin/bash",
+				},
+				user{
+					Name:  "admin",
+					Shell: "/bin/zsh",
+				},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		var got []user
+
+		err := decodeSlice(test.input.([]section), reflect.ValueOf(&got))
 
 		if test.shouldError {
 			if !reflect.DeepEqual(err, test.wantError) {
@@ -308,12 +380,13 @@ func TestDecode(t *testing.T) {
 
 func TestUnmarshal(t *testing.T) {
 	type user struct {
+		Name   string   `ini:"name"`
 		Shell  string   `ini:"shell"`
 		UID    int      `ini:"uid"`
 		Groups []string `ini:"group"`
 	}
 	type config struct {
-		User    user     `ini:"user"`
+		Users   []user   `ini:"user"`
 		Sources []string `ini:"source"`
 	}
 
@@ -324,16 +397,33 @@ func TestUnmarshal(t *testing.T) {
 		{
 			input: `source=passwd
 [user]
+name=root
 shell=/bin/bash
 uid=1000
+group=wheel
+group=video
+
+[user]
+name=admin
+shell=/bin/bash
+uid=1001
 group=wheel
 group=video`,
 			want: config{
 				Sources: []string{"passwd"},
-				User: user{
-					Shell:  "/bin/bash",
-					UID:    1000,
-					Groups: []string{"wheel", "video"},
+				Users: []user{
+					user{
+						Name:   "root",
+						Shell:  "/bin/bash",
+						UID:    1000,
+						Groups: []string{"wheel", "video"},
+					},
+					user{
+						Name:   "admin",
+						Shell:  "/bin/bash",
+						UID:    1001,
+						Groups: []string{"wheel", "video"},
+					},
 				},
 			},
 		},
