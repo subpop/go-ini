@@ -33,6 +33,15 @@ func TestAST(t *testing.T) {
 						},
 					},
 				},
+				{
+					name: "user",
+					props: map[string]property{
+						"shell": {
+							key: "shell",
+							val: []string{"/bin/zsh"},
+						},
+					},
+				},
 			},
 			want: ast{
 				"": []section{
@@ -45,6 +54,15 @@ func TestAST(t *testing.T) {
 							"shell": {
 								key: "shell",
 								val: []string{"/bin/bash"},
+							},
+						},
+					},
+					{
+						name: "user",
+						props: map[string]property{
+							"shell": {
+								key: "shell",
+								val: []string{"/bin/zsh"},
 							},
 						},
 					},
