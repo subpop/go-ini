@@ -15,9 +15,10 @@ func (e *errParse) Error() string {
 }
 
 type parser struct {
-	ast ast
-	l   *lexer
-	tok token
+	ast  ast
+	l    *lexer
+	tok  token
+	prev *token
 }
 
 func newParser(data []byte) *parser {
@@ -29,7 +30,16 @@ func newParser(data []byte) *parser {
 }
 
 func (p *parser) nextToken() {
-	p.tok = p.l.nextToken()
+	if p.prev != nil {
+		p.tok = *p.prev
+		p.prev = nil
+	} else {
+		p.tok = p.l.nextToken()
+	}
+}
+
+func (p *parser) backup() {
+	p.prev = &p.tok
 }
 
 func (p *parser) parse() error {
@@ -49,6 +59,7 @@ func (p *parser) parse() error {
 				return err
 			}
 			p.ast.addSection(sec)
+			p.backup()
 		case tokenKey:
 			prop := newProperty(p.tok.val)
 			if err := p.parseProperty(&prop); err != nil {
@@ -82,12 +93,6 @@ func (p *parser) parseSection(out *section) error {
 				return err
 			}
 			out.addProperty(prop)
-		case tokenSection:
-			sec := newSection(p.tok.val)
-			if err := p.parseSection(&sec); err != nil {
-				return err
-			}
-			p.ast.addSection(sec)
 		default:
 			return nil
 		}

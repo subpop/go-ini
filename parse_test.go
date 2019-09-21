@@ -12,7 +12,7 @@ func TestParse(t *testing.T) {
 		want  ast
 	}{
 		{
-			input: "version=1.2.3\n\n[user]\nname=root\nshell=/bin/bash",
+			input: "version=1.2.3\n\n[user]\nname=root\nshell=/bin/bash\n\n[user]\nname=admin\nshell=/bin/bash",
 			want: ast{
 				"": []section{
 					section{
@@ -32,6 +32,19 @@ func TestParse(t *testing.T) {
 							"name": property{
 								key: "name",
 								val: []string{"root"},
+							},
+							"shell": property{
+								key: "shell",
+								val: []string{"/bin/bash"},
+							},
+						},
+					},
+					section{
+						name: "user",
+						props: map[string]property{
+							"name": property{
+								key: "name",
+								val: []string{"admin"},
 							},
 							"shell": property{
 								key: "shell",
