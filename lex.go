@@ -2,6 +2,7 @@ package ini
 
 import (
 	"fmt"
+	"unicode"
 	"unicode/utf8"
 )
 
@@ -40,7 +41,7 @@ type lexer struct {
 func lex(input string) *lexer {
 	l := &lexer{
 		input:  input,
-		state:  lexStart,
+		state:  lexLineStart,
 		line:   1,
 		tokens: make(chan token, 2),
 	}
@@ -87,6 +88,13 @@ func (l *lexer) peek() rune {
 	return r
 }
 
+// rpeek returns the previous rune from the input without moving the position
+func (l *lexer) rpeek() rune {
+	r := l.prev()
+	l.next()
+	return r
+}
+
 // current returns the value of the current token
 func (l *lexer) current() string {
 	return l.input[l.start:l.pos]
@@ -126,35 +134,43 @@ func (l *lexer) nextToken() token {
 	}
 }
 
-func lexStart(l *lexer) stateFunc {
+func lexLineStart(l *lexer) stateFunc {
 	r := l.next()
 	switch {
+	case r == eof:
+		l.emit(tokenEOF)
+		return nil
 	case r == ';':
 		return lexComment
 	case r == '[':
 		return lexSection
-	case r == '\n', r == '\t', r == ' ':
-		l.ignore()
-		return lexStart
-	case r == eof:
-		l.emit(tokenEOF)
-		return nil
-	case r == '=':
-		return l.errorf("ini: invalid character: line %v: '%v'", l.line, l.current())
-	default:
+	case r == '\n':
+		return lexLineEnd
+	case unicode.IsLetter(r) || unicode.IsDigit(r):
 		return lexKey
+	default:
+		return l.errorf("invalid character: line: %v, column: %v, '%v'", l.line, l.col, l.current())
 	}
+}
+
+func lexLineEnd(l *lexer) stateFunc {
+	if l.rpeek() == '\n' {
+		l.ignore()
+	} else {
+		l.emit(tokenText)
+	}
+	return lexLineStart
 }
 
 func lexComment(l *lexer) stateFunc {
 	for {
 		r := l.next()
-		if newline(r) {
+		if r == '\n' {
 			break
 		}
 	}
 	l.emit(tokenComment)
-	return lexStart
+	return lexLineStart
 }
 
 func lexSection(l *lexer) stateFunc {
@@ -169,7 +185,7 @@ func lexSection(l *lexer) stateFunc {
 	l.emit(tokenSection)
 	l.next()
 	l.ignore()
-	return lexStart
+	return lexLineStart
 }
 
 func lexKey(l *lexer) stateFunc {
@@ -196,16 +212,10 @@ func lexAssignment(l *lexer) stateFunc {
 func lexText(l *lexer) stateFunc {
 	for {
 		r := l.peek()
-		if newline(r) || r == eof {
+		if r == '\n' || r == eof {
 			break
 		}
 		r = l.next()
 	}
-	l.emit(tokenText)
-	return lexStart
-}
-
-// newline returns true if r is equal to a newline character
-func newline(r rune) bool {
-	return r == '\n'
+	return lexLineEnd
 }

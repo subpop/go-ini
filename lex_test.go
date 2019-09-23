@@ -10,6 +10,15 @@ func TestLexer(t *testing.T) {
 		want  []token
 	}{
 		{
+			input: "shell=/bin/bash",
+			want: []token{
+				{typ: tokenKey, val: "shell"},
+				{typ: tokenAssignment, val: "="},
+				{typ: tokenText, val: "/bin/bash"},
+				{typ: tokenEOF, val: ""},
+			},
+		},
+		{
 			input: "; ignore me\n[user]\nname=root\nshell=/bin/bash\n\n[user]\nname=admin\nshell=/bin/bash\n\n[group]\nname=wheel",
 			want: []token{
 				{typ: tokenComment, val: "; ignore me\n"},
@@ -35,18 +44,9 @@ func TestLexer(t *testing.T) {
 			},
 		},
 		{
-			input: "shell=/bin/bash",
-			want: []token{
-				{typ: tokenKey, val: "shell"},
-				{typ: tokenAssignment, val: "="},
-				{typ: tokenText, val: "/bin/bash"},
-				{typ: tokenEOF, val: ""},
-			},
-		},
-		{
 			input: "=",
 			want: []token{
-				{typ: tokenError, val: "ini: invalid character: line 1: '='"},
+				{typ: tokenError, val: "invalid character: line: 1, column: 1, '='"},
 			},
 		},
 	}
@@ -57,7 +57,7 @@ func TestLexer(t *testing.T) {
 		for {
 			tok := l.nextToken()
 			if tok != test.want[i] {
-				t.Fatalf("%v != %v", tok, test.want[i])
+				t.Fatalf("%+v != %+v", tok, test.want[i])
 			}
 			if tok.typ == tokenEOF || tok.typ == tokenError {
 				break
