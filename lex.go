@@ -148,6 +148,9 @@ func lexLineStart(l *lexer) stateFunc {
 		return lexLineEnd
 	case unicode.IsLetter(r) || unicode.IsDigit(r):
 		return lexKey
+	case r == '\t':
+		l.ignore()
+		return lexLineStart
 	default:
 		return l.errorf("invalid character: line: %v, column: %v, '%v'", l.line, l.col, l.current())
 	}

@@ -58,6 +58,15 @@ func TestLexer(t *testing.T) {
 				{typ: tokenEOF, val: ""},
 			},
 		},
+		{
+			input: "\tkey=has spaces",
+			want: []token{
+				{typ: tokenKey, val: "key"},
+				{typ: tokenAssignment, val: "="},
+				{typ: tokenText, val: "has spaces"},
+				{typ: tokenEOF, val: ""},
+			},
+		},
 	}
 
 	for _, test := range tests {
