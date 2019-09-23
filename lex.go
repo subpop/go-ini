@@ -154,11 +154,22 @@ func lexLineStart(l *lexer) stateFunc {
 }
 
 func lexLineEnd(l *lexer) stateFunc {
+	if l.peek() == ' ' {
+		l.next()
+		return lexText
+	}
+
+	if l.rpeek() == '\\' {
+		l.next()
+		return lexText
+	}
+
 	if l.rpeek() == '\n' {
 		l.ignore()
-	} else {
-		l.emit(tokenText)
+		return lexLineStart
 	}
+
+	l.emit(tokenText)
 	return lexLineStart
 }
 

@@ -49,6 +49,15 @@ func TestLexer(t *testing.T) {
 				{typ: tokenError, val: "invalid character: line: 1, column: 1, '='"},
 			},
 		},
+		{
+			input: "multiline=test\\\nlines",
+			want: []token{
+				{typ: tokenKey, val: "multiline"},
+				{typ: tokenAssignment, val: "="},
+				{typ: tokenText, val: "test\\\nlines"},
+				{typ: tokenEOF, val: ""},
+			},
+		},
 	}
 
 	for _, test := range tests {
