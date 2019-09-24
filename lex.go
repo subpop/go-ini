@@ -27,6 +27,11 @@ type token struct {
 	val string
 }
 
+type lexerOptions struct {
+	allowMultilineEscapeNewline    bool // support escaped newlines
+	allowMultilineWhitespacePrefix bool // support space-prefixed lines
+}
+
 type lexer struct {
 	input  string // the string being scanned.
 	start  int    // start position of this item.
@@ -36,6 +41,7 @@ type lexer struct {
 	col    int    // current column in the current line.
 	state  stateFunc
 	tokens chan token
+	opts   lexerOptions
 }
 
 func lex(input string) *lexer {
@@ -157,12 +163,12 @@ func lexLineStart(l *lexer) stateFunc {
 }
 
 func lexLineEnd(l *lexer) stateFunc {
-	if l.peek() == ' ' {
+	if l.opts.allowMultilineWhitespacePrefix && l.peek() == ' ' {
 		l.next()
 		return lexText
 	}
 
-	if l.rpeek() == '\\' {
+	if l.opts.allowMultilineEscapeNewline && l.rpeek() == '\\' {
 		l.next()
 		return lexText
 	}

@@ -8,6 +8,7 @@ func TestLexer(t *testing.T) {
 	tests := []struct {
 		input string
 		want  []token
+		opts  lexerOptions
 	}{
 		{
 			input: "shell=/bin/bash",
@@ -57,6 +58,10 @@ func TestLexer(t *testing.T) {
 				{typ: tokenText, val: "test\\\nlines"},
 				{typ: tokenEOF, val: ""},
 			},
+			opts: lexerOptions{
+				allowMultilineEscapeNewline:    true,
+				allowMultilineWhitespacePrefix: true,
+			},
 		},
 		{
 			input: "\tkey=has spaces",
@@ -71,6 +76,7 @@ func TestLexer(t *testing.T) {
 
 	for _, test := range tests {
 		l := lex(test.input)
+		l.opts = test.opts
 		var i int
 		for {
 			tok := l.nextToken()
