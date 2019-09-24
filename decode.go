@@ -21,8 +21,22 @@ func (e *UnmarshalTypeError) Error() string {
 	return "ini: cannot unmarshal " + e.Value + " into Go value of type " + e.Type.String()
 }
 
+// Unmarshal parses the INI-encoded data and stores the result in the value
+// pointed to by v.
 func Unmarshal(data []byte, v interface{}) error {
+	return unmarshal(data, v, Options{})
+}
+
+// UnmarshalWithOptions allows parsing behavior to be configured with an Options
+// value.
+func UnmarshalWithOptions(data []byte, v interface{}, opts Options) error {
+	return unmarshal(data, v, opts)
+}
+
+func unmarshal(data []byte, v interface{}, opts Options) error {
 	p := newParser(data)
+	p.l.opts.allowMultilineEscapeNewline = opts.AllowMultilineValues
+	p.l.opts.allowMultilineWhitespacePrefix = opts.AllowMultilineValues
 	if err := p.parse(); err != nil {
 		return err
 	}
