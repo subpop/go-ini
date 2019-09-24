@@ -22,7 +22,24 @@ func (e *UnmarshalTypeError) Error() string {
 }
 
 // Unmarshal parses the INI-encoded data and stores the result in the value
-// pointed to by v.
+// pointed to by v. If v is nil or not a pointer to a struct, Unmarshal returns
+// an UnmarshalTypeError; INI-encoded data must be encoded into a struct.
+//
+// Unmarshal uses the inverse of the encodings that Marshal uses, following the
+// rules below:
+//
+// So-called "global" property keys are matched to a struct field within v,
+// either by its field name or tag. Values are then decoded according to the
+// type of the destination field.
+//
+// Sections must be unmarshaled into a struct. Unmarshal matches the section
+// name to a struct field name or tag. Subsequent property keys are then matched
+// against struct field names or tags within the struct.
+//
+// If a duplicate section name or property key is encountered, Unmarshal will
+// allocate a slice according to the number of duplicate keys found, and append
+// each value to the slice. If the destination struct field is not a slice type,
+// an error is returned.
 func Unmarshal(data []byte, v interface{}) error {
 	return unmarshal(data, v, Options{})
 }
