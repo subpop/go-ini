@@ -3,30 +3,18 @@ package ini
 import (
 	"bytes"
 	"encoding"
-	"fmt"
 	"reflect"
 	"strconv"
-	"strings"
 )
 
-// An UnsupportedTypeError is returned by Marshal when attempting
-// to encode an unsupported value type.
-type UnsupportedTypeError struct {
+// A MarshalTypeError represents a type that cannot be encoded in an INI-compatible
+// textual format.
+type MarshalTypeError struct {
 	Type reflect.Type
 }
 
-func (e *UnsupportedTypeError) Error() string {
+func (e *MarshalTypeError) Error() string {
 	return "ini: unsupported type: " + e.Type.String()
-}
-
-// An UnsupportedValueError is returned by Marshal when attempting
-// to encode an unsupported value.
-type UnsupportedValueError struct {
-	Value reflect.Value
-}
-
-func (e *UnsupportedValueError) Error() string {
-	return "ini: unsupported value: " + e.Value.String()
 }
 
 // A MarshalerError represents an error from calling a MarshalText method.
@@ -42,9 +30,9 @@ func (e *MarshalerError) Error() string {
 // Marshal returns the INI encoding of v.
 //
 // Marshal traverses the value of v recursively. If an encountered value implements
-// the encoding.MarshalText, Marshal calls its MarshalText method and encodes the
-// result into the INI property. Otherwise Marshal attempts to encode a textual
-// representation of the value through string formatting.
+// the encoding.MarshalText interface, Marshal calls its MarshalText method and
+// encodes the result into the INI property value. Otherwise Marshal attempts to
+// encode a textual representation of the value through string formatting.
 //
 // The following types are encoded:
 //
@@ -61,7 +49,7 @@ func (e *MarshalerError) Error() string {
 // options without overriding the default field name.
 //
 // The "omitempty" option specifies that the field should be omitted from the
-// encoding if the field as an empty value, defined as false, 0, a nil pointer,
+// encoding if the field is an empty value, defined as false, 0, a nil pointer,
 // a nil interface value, and an empty string.
 //
 // As a special case, if the field tag is "-", the field is always omitted.
@@ -86,133 +74,150 @@ func (e *MarshalerError) Error() string {
 // Interface values encode as the value contained in the interface. A nil interface
 // value encodes as an empty property value.
 //
-// Channel, complex, map, slice, array and function values cannot be encoded in
-// INI. Attempting to encode such a value causes Marshal to return an
-// UnsupportedTypeError.
+// Slices and arrays are encoded as a sequential list of properties with
+// duplicate keys.
 //
-// Attempting to marshal any type other than a struct causes Marshal to return an
-// UnsupportedValueError.
-//
+// Channel, complex, map and function values cannot be encoded in INI.
+// Attempting to encode such a value causes Marshal to return a
+// MarshalTypeError.
 func Marshal(v interface{}) ([]byte, error) {
 	var buf bytes.Buffer
 
-	switch reflect.TypeOf(v).Kind() {
-	case reflect.Ptr, reflect.Struct:
-		if err := encode(&buf, reflect.ValueOf(v)); err != nil {
-			return nil, err
-		}
-		return bytes.TrimSpace(buf.Bytes()), nil
-	default:
-		return nil, &UnsupportedTypeError{reflect.ValueOf(v).Type()}
+	if err := encode(&buf, reflect.ValueOf(v)); err != nil {
+		return nil, err
 	}
+	return bytes.TrimSpace(buf.Bytes()), nil
 }
 
-func encode(buf *bytes.Buffer, v reflect.Value) error {
-	t := v.Type()
-	switch v.Kind() {
-	case reflect.Ptr:
-		return encode(buf, v.Elem())
-	case reflect.Struct:
-		// First loop over all fields in the struct, skipping struct fields.
-		// When inside a struct, this prints out all fields in the struct as
-		// properties. Convienently, during the first entry into this function
-		// all non-struct fields are written as "global" INI properties.
-		for i := 0; i < v.NumField(); i++ {
-			sv := v.Field(i)
-			if sv.Kind() == reflect.Struct {
-				continue
-			}
-			sf := t.Field(i)
-			key, opts := key(sf)
-			if key == "-" {
-				continue
-			}
-			if opts["omitempty"] && sv.Interface() == reflect.Zero(sv.Type()).Interface() {
-				continue
-			}
-			buf.WriteString(key)
-			buf.WriteRune('=')
-			if err := encode(buf, sv); err != nil {
-				return err
-			}
-			buf.WriteRune('\n')
-		}
-		buf.WriteRune('\n')
+// encode reflects on the values of rv, encoding them as INI data. If rv is not
+// a pointer to a struct, an error is returned. encode makes two passes over
+// the struct fields of rv. The first pass skips struct fields that are
+// themselve structs, encoding all struct fields as "global" INI properties.
+// The second pass then encodes each struct field that *is* a struct as an
+// INI section.
+func encode(buf *bytes.Buffer, rv reflect.Value) error {
+	if rv.Type().Kind() == reflect.Ptr {
+		rv = reflect.Indirect(rv)
+	}
 
-		// Next loop over all fields in the struct, skipping all non-struct fields.
-		// Each struct field is then encoded recursively through encode().
-		for i := 0; i < v.NumField(); i++ {
-			sv := v.Field(i)
-			if sv.Kind() == reflect.Struct {
-				sf := t.Field(i)
-				key, opts := key(sf)
-				if key == "-" {
-					continue
-				}
-				if opts["omitempty"] && sv.Interface() == reflect.Zero(sv.Type()).Interface() {
-					continue
-				}
-				fmt.Fprintf(buf, "[%v]\n", key)
-				if err := encode(buf, sv); err != nil {
-					return err
-				}
-			}
+	if rv.Type().Kind() != reflect.Struct {
+		return &MarshalTypeError{Type: rv.Type()}
+	}
+
+	// first pass, skipping structs
+	for i := 0; i < rv.NumField(); i++ {
+		sf := rv.Type().Field(i)
+		sv := rv.Field(i)
+		t := newTag(sf)
+
+		if t.name == "-" || sf.Type.Kind() == reflect.Struct {
+			continue
 		}
-	case reflect.String:
-		if err := encodeTextMarshaler(buf, v, func() {
-			buf.WriteString(v.String())
-		}); err != nil {
+
+		if t.omitempty && sv.Interface() == reflect.Zero(sv.Type()).Interface() {
+			continue
+		}
+
+		if err := encodeProperty(buf, t.name, sv); err != nil {
 			return err
 		}
-	case reflect.Int:
-		if err := encodeTextMarshaler(buf, v, func() {
-			buf.WriteString(strconv.FormatInt(v.Int(), 10))
-		}); err != nil {
+	}
+
+	buf.WriteRune('\n')
+
+	// second pass, only structs
+	for i := 0; i < rv.NumField(); i++ {
+		sf := rv.Type().Field(i)
+		sv := rv.Field(i)
+		t := newTag(sf)
+
+		if t.name == "-" || sf.Type.Kind() != reflect.Struct {
+			continue
+		}
+
+		if t.omitempty && sv.Interface() == reflect.Zero(sv.Type()).Interface() {
+			continue
+		}
+
+		if err := encodeSection(buf, t.name, sv); err != nil {
 			return err
 		}
-	case reflect.Bool:
-		if err := encodeTextMarshaler(buf, v, func() {
-			var s string
-			if v.Bool() {
-				s = "true"
-			} else {
-				s = "false"
-			}
-			buf.WriteString(s)
-		}); err != nil {
-			return err
-		}
-	default:
-		return &UnsupportedValueError{v}
 	}
 
 	return nil
 }
 
-func key(sf reflect.StructField) (tag string, tagOpts map[string]bool) {
-	tag = sf.Name
-	tags := strings.Split(sf.Tag.Get("ini"), ",")
-	if tags[0] != "" {
-		tag = tags[0]
+func encodeSection(buf *bytes.Buffer, key string, rv reflect.Value) error {
+	if rv.Type().Kind() != reflect.Struct {
+		return &MarshalTypeError{Type: rv.Type()}
 	}
-	tagOpts = make(map[string]bool)
-	for _, opt := range tags[1:] {
-		tagOpts[opt] = true
+
+	buf.WriteString("[" + key + "]\n")
+
+	for i := 0; i < rv.NumField(); i++ {
+		sf := rv.Type().Field(i)
+		sv := rv.Field(i)
+		t := newTag(sf)
+
+		if t.name == "-" || sf.Type.Kind() == reflect.Struct {
+			continue
+		}
+
+		if t.omitempty && sv.Interface() == reflect.Zero(sv.Type()).Interface() {
+			continue
+		}
+
+		if err := encodeProperty(buf, t.name, sv); err != nil {
+			return err
+		}
 	}
-	return
+
+	buf.WriteRune('\n')
+
+	return nil
 }
 
-func encodeTextMarshaler(buf *bytes.Buffer, v reflect.Value, byteWriter func()) error {
-	m, ok := v.Interface().(encoding.TextMarshaler)
-	if !ok {
-		byteWriter()
-	} else {
-		b, err := m.MarshalText()
-		if err != nil {
-			return &MarshalerError{v.Type(), err}
-		}
-		buf.Write(b)
-	}
+// encodeProperty reflects on the concrete type of rv and encodes it as bytes
+// into buf. If rv implements the encoding.TextMarshaler interface, it is used
+// to encode the value, otherwise the type is encoded as a string using conversion
+// where possible.
+func encodeProperty(buf *bytes.Buffer, key string, rv reflect.Value) error {
+	var data []byte
 
+	if m, ok := rv.Interface().(encoding.TextMarshaler); ok {
+		var err error
+		data, err = m.MarshalText()
+		if err != nil {
+			return &MarshalerError{Type: rv.Type(), Err: err}
+		}
+	} else {
+		switch rv.Type().Kind() {
+		case reflect.Slice:
+			for i := 0; i < rv.Len(); i++ {
+				if err := encodeProperty(buf, key, rv.Index(i)); err != nil {
+					return err
+				}
+			}
+		case reflect.String:
+			data = []byte(rv.String())
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			data = []byte(strconv.FormatInt(rv.Int(), 10))
+		case reflect.Bool:
+			if rv.Bool() {
+				data = []byte("true")
+			} else {
+				data = []byte("false")
+			}
+		default:
+			return &MarshalTypeError{Type: rv.Type()}
+		}
+
+	}
+	if len(data) > 0 {
+		buf.WriteString(key)
+		buf.WriteRune('=')
+		buf.Write(data)
+		buf.WriteRune('\n')
+	}
 	return nil
 }
