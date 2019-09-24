@@ -2,6 +2,7 @@ package ini
 
 import (
 	"reflect"
+	"regexp"
 	"strconv"
 )
 
@@ -40,6 +41,13 @@ func (e *UnmarshalTypeError) Error() string {
 // allocate a slice according to the number of duplicate keys found, and append
 // each value to the slice. If the destination struct field is not a slice type,
 // an error is returned.
+//
+// A struct field tag name may contain a valid regular expression within square
+// brackets (i.e. `ini:"[lib.*]"`). If such a tag is detected and the destination
+// field is a slice, any section name that matches the regular expression is
+// decoded into the destination field as an element in the slice. Under these
+// circumstances, the section name is not decoded. However, if a struct field
+// named "SectionName" is encountered, the section name decoded into that field.
 func Unmarshal(data []byte, v interface{}) error {
 	return unmarshal(data, v, Options{})
 }
@@ -103,7 +111,23 @@ func decode(ast ast, rv reflect.Value) error {
 			var val interface{}
 			switch sf.Type.Elem().Kind() {
 			case reflect.Struct:
-				val = ast[t.name]
+				var r *regexp.Regexp
+				r, err := t.pattern()
+				if err != nil {
+					return err
+				}
+				if r != nil {
+					val = make([]section, 0)
+					for k, v := range ast {
+						if k != "" && r.MatchString(k) {
+							for _, s := range v {
+								val = append(val.([]section), s)
+							}
+						}
+					}
+				} else {
+					val = ast[t.name]
+				}
 			default:
 				val = ast[""][0].props[t.name].val
 			}
@@ -160,7 +184,12 @@ func decodeStruct(i interface{}, rv reflect.Value) error {
 			}
 		case reflect.String:
 			sv := rv.Field(i).Addr()
-			val := s.props[t.name].val[0]
+			var val string
+			if sf.Name == "SectionName" {
+				val = s.name
+			} else {
+				val = s.props[t.name].val[0]
+			}
 			if err := decodeString(val, sv); err != nil {
 				return err
 			}

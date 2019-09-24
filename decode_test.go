@@ -441,3 +441,45 @@ group=video`,
 		}
 	}
 }
+
+func TestUnmarshalPattern(t *testing.T) {
+	type image struct {
+		SectionName string
+		Name        string `ini:"name"`
+	}
+	type index struct {
+		Images []image `ini:"[centos-.*]"`
+	}
+	tests := []struct {
+		input string
+		want  index
+	}{
+		{
+			input: `[centos-6]
+			name=CentOS 6.0
+			
+			[centos-6]
+			name=CentOS 6.1
+			
+			[debian-10]
+			name=Debian 10`,
+			want: index{
+				Images: []image{
+					{SectionName: "centos-6", Name: "CentOS 6.0"},
+					{SectionName: "centos-6", Name: "CentOS 6.1"},
+				},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		var got index
+		if err := Unmarshal([]byte(test.input), &got); err != nil {
+			t.Fatal(err)
+		}
+
+		if !cmp.Equal(got, test.want) {
+			t.Errorf("%v != %v", got, test.want)
+		}
+	}
+}

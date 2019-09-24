@@ -2,6 +2,7 @@ package ini
 
 import (
 	"reflect"
+	"regexp"
 	"strings"
 )
 
@@ -24,4 +25,11 @@ func newTag(sf reflect.StructField) tag {
 		t.omitempty = strings.Contains(st[1], "omitempty")
 	}
 	return t
+}
+
+func (t tag) pattern() (*regexp.Regexp, error) {
+	if strings.HasPrefix(t.name, "[") && strings.HasSuffix(t.name, "]") {
+		return regexp.Compile(t.name[1 : len(t.name)-1])
+	}
+	return nil, nil
 }
