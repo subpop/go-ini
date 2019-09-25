@@ -84,7 +84,8 @@ func (l *lexer) prev() rune {
 		l.line--
 		l.col = 0
 	}
-	r, _ := utf8.DecodeRuneInString(l.input[l.pos:])
+	r, w := utf8.DecodeRuneInString(l.input[l.pos:])
+	l.width = w
 	return r
 }
 
