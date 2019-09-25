@@ -170,6 +170,15 @@ func decode(ast ast, rv reflect.Value) error {
 			if err := decodeUint(val, sv); err != nil {
 				return err
 			}
+		case reflect.Bool:
+			sv := rv.Field(i).Addr()
+			if t.omitempty && len(ast[""][0].props[t.name].val) == 0 {
+				continue
+			}
+			val := ast[""][0].props[t.name].val[0]
+			if err := decodeBool(val, sv); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -233,6 +242,12 @@ func decodeStruct(i interface{}, rv reflect.Value) error {
 			if err := decodeUint(val, sv); err != nil {
 				return err
 			}
+		case reflect.Bool:
+			sv := rv.Field(i).Addr()
+			val := s.props[t.name].val[0]
+			if err := decodeBool(val, sv); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -262,6 +277,8 @@ func decodeSlice(v interface{}, rv reflect.Value) error {
 		decoderFunc = decodeUint
 	case reflect.Struct:
 		decoderFunc = decodeStruct
+	case reflect.Bool:
+		decoderFunc = decodeBool
 	default:
 		return &UnmarshalTypeError{
 			Value: reflect.ValueOf(v).String(),
@@ -350,5 +367,28 @@ func decodeUint(i interface{}, rv reflect.Value) error {
 	}
 
 	rv.Elem().SetUint(n)
+	return nil
+}
+
+// decodeBool sets the underlying value of the value to which rv points to the
+// concrete value stored in i. If rv is not a reflect.Ptr, decodeBool returns
+// UnmarshalTypeError.
+func decodeBool(i interface{}, rv reflect.Value) error {
+	if reflect.TypeOf(i).Kind() != reflect.String || rv.Type().Kind() != reflect.Ptr {
+		return &UnmarshalTypeError{
+			Value: reflect.ValueOf(i).String(),
+			Type:  rv.Type(),
+		}
+	}
+
+	n, err := strconv.ParseBool(i.(string))
+	if err != nil {
+		return &UnmarshalTypeError{
+			Value: reflect.ValueOf(i).String(),
+			Type:  rv.Type(),
+		}
+	}
+
+	rv.Elem().SetBool(n)
 	return nil
 }

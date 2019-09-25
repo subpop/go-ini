@@ -135,6 +135,58 @@ func TestDecodeUint(t *testing.T) {
 		}
 	}
 }
+
+func TestDecodeBool(t *testing.T) {
+	tests := []struct {
+		input       string
+		want        bool
+		shouldError bool
+		wantError   error
+	}{
+		{
+			input: "true",
+			want:  true,
+		},
+		{
+			input: "0",
+			want:  false,
+		},
+		{
+			input: "T",
+			want:  true,
+		},
+		{
+			input:       "forty-two",
+			want:        false,
+			shouldError: true,
+			wantError: &UnmarshalTypeError{
+				Value: reflect.ValueOf("forty-two").String(),
+				Type:  reflect.PtrTo(reflect.TypeOf(false)),
+			},
+		},
+	}
+
+	for _, test := range tests {
+		var got bool
+		rv := reflect.ValueOf(&got)
+
+		err := decodeBool(test.input, rv)
+
+		if test.shouldError {
+			if !reflect.DeepEqual(err, test.wantError) {
+				t.Errorf("%v != %v", err, test.wantError)
+			}
+		} else {
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got != test.want {
+				t.Errorf("%v != %v", got, test.want)
+			}
+		}
+	}
+}
+
 func TestDecodeStruct(t *testing.T) {
 	type user struct {
 		Shell  string   `ini:"shell"`
