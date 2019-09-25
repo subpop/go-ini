@@ -222,24 +222,26 @@ func lexAssignment(l *lexer) stateFunc {
 func lexText(l *lexer) stateFunc {
 	for {
 		r := l.peek()
-		if r == eof {
+		if r == '\n' || r == eof {
 			break
-		}
-		if r == '\n' {
-			if l.opts.allowMultilineWhitespacePrefix {
-				l.next()
-				if l.peek() != ' ' {
-					break
-				}
-			}
-			if l.opts.allowMultilineEscapeNewline && l.rpeek() != '\\' {
-				break
-			}
 		}
 		l.next()
 	}
 	if !l.opts.allowEmptyValues && len(l.current()) == 0 {
 		l.errorf("invalid token: empty value")
+	}
+	if l.opts.allowMultilineWhitespacePrefix {
+		l.next()
+		if l.peek() == ' ' {
+			return lexText
+		}
+	}
+	if l.opts.allowMultilineEscapeNewline {
+		r := l.rpeek()
+		if r == rune(92) /* backslash */ {
+			l.next()
+			return lexText
+		}
 	}
 	l.emit(tokenText)
 	return lexLineStart
