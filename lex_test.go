@@ -4,13 +4,14 @@ import (
 	"testing"
 )
 
-func TestLexer(t *testing.T) {
+func TestLexerNextToken(t *testing.T) {
 	tests := []struct {
+		desc  string
 		input string
 		want  []token
-		opts  lexerOptions
 	}{
 		{
+			desc:  "simple case",
 			input: "shell=/bin/bash",
 			want: []token{
 				{typ: tokenKey, val: "shell"},
@@ -20,70 +21,52 @@ func TestLexer(t *testing.T) {
 			},
 		},
 		{
-			input: "; ignore me\n[user]\nname=root\nshell=/bin/bash\n\n[user]\nname=admin\nshell=/bin/bash\n\n[group]\nname=wheel",
+			desc:  "complete case",
+			input: "; user\n[user]\nshell=/bin/bash",
 			want: []token{
-				{typ: tokenComment, val: "; ignore me\n"},
+				{typ: tokenComment, val: `; user`},
 				{typ: tokenSection, val: "user"},
-				{typ: tokenKey, val: "name"},
-				{typ: tokenAssignment, val: "="},
-				{typ: tokenText, val: "root"},
 				{typ: tokenKey, val: "shell"},
 				{typ: tokenAssignment, val: "="},
 				{typ: tokenText, val: "/bin/bash"},
-				{typ: tokenSection, val: "user"},
-				{typ: tokenKey, val: "name"},
-				{typ: tokenAssignment, val: "="},
-				{typ: tokenText, val: "admin"},
+				{typ: tokenEOF, val: ""},
+			},
+		},
+		{
+			desc:  "malformed section",
+			input: "[user\nshell=/bin/bash",
+			want: []token{
+				{typ: tokenError, val: `unexpected input: wanted ']', got '\n'`},
+			},
+		},
+		{
+			desc:  "empty value",
+			input: "shell=",
+			want: []token{
 				{typ: tokenKey, val: "shell"},
 				{typ: tokenAssignment, val: "="},
-				{typ: tokenText, val: "/bin/bash"},
-				{typ: tokenSection, val: "group"},
-				{typ: tokenKey, val: "name"},
-				{typ: tokenAssignment, val: "="},
-				{typ: tokenText, val: "wheel"},
-				{typ: tokenEOF, val: ""},
+				{typ: tokenError, val: "invalid token: empty value"},
 			},
 		},
 		{
-			input: "=",
+			desc:  "missing assignment",
+			input: "shell",
 			want: []token{
-				{typ: tokenError, val: "invalid character: line: 1, column: 1, '='"},
-			},
-		},
-		{
-			input: "multiline=test\\\nlines",
-			want: []token{
-				{typ: tokenKey, val: "multiline"},
-				{typ: tokenAssignment, val: "="},
-				{typ: tokenText, val: "test\\\nlines"},
-				{typ: tokenEOF, val: ""},
-			},
-			opts: lexerOptions{
-				allowMultilineEscapeNewline:    true,
-				allowMultilineWhitespacePrefix: true,
-			},
-		},
-		{
-			input: "\tkey=has spaces",
-			want: []token{
-				{typ: tokenKey, val: "key"},
-				{typ: tokenAssignment, val: "="},
-				{typ: tokenText, val: "has spaces"},
-				{typ: tokenEOF, val: ""},
+				{typ: tokenError, val: `unexpected input: wanted '=', got '\x00'`},
 			},
 		},
 	}
 
 	for _, test := range tests {
 		l := lex(test.input)
-		l.opts = test.opts
 		var i int
 		for {
-			tok := l.nextToken()
-			if tok != test.want[i] {
-				t.Fatalf("%+v != %+v", tok, test.want[i])
+			got := l.nextToken()
+
+			if got != test.want[i] {
+				t.Fatalf("%v: %+v != %+v", test.desc, got, test.want[i])
 			}
-			if tok.typ == tokenEOF || tok.typ == tokenError {
+			if got.typ == tokenEOF || got.typ == tokenError {
 				break
 			}
 			i++

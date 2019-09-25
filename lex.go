@@ -30,6 +30,7 @@ type token struct {
 type lexerOptions struct {
 	allowMultilineEscapeNewline    bool // support escaped newlines
 	allowMultilineWhitespacePrefix bool // support space-prefixed lines
+	allowEmptyValues               bool // accept empty values as valid
 }
 
 type lexer struct {
@@ -158,7 +159,7 @@ func lexLineStart(l *lexer) stateFunc {
 		l.ignore()
 		return lexLineStart
 	default:
-		return l.errorf("invalid character: line: %v, column: %v, '%v'", l.line, l.col, l.current())
+		return l.errorf("unexpected input: line %v: %q", l.line, r)
 	}
 }
 
@@ -178,16 +179,21 @@ func lexLineEnd(l *lexer) stateFunc {
 		return lexLineStart
 	}
 
+	if len(l.current()) == 0 && !l.opts.allowEmptyValues {
+		return l.errorf("invalid token: empty value")
+	}
+
 	l.emit(tokenText)
 	return lexLineStart
 }
 
 func lexComment(l *lexer) stateFunc {
 	for {
-		r := l.next()
-		if r == '\n' {
+		r := l.peek()
+		if r == '\n' || r == eof {
 			break
 		}
+		r = l.next()
 	}
 	l.emit(tokenComment)
 	return lexLineStart
@@ -197,6 +203,9 @@ func lexSection(l *lexer) stateFunc {
 	l.ignore()
 	for {
 		r := l.peek()
+		if r == '\n' || r == eof {
+			return l.errorf("unexpected input: wanted ']', got %q", r)
+		}
 		if r == ']' {
 			break
 		}
@@ -211,6 +220,9 @@ func lexSection(l *lexer) stateFunc {
 func lexKey(l *lexer) stateFunc {
 	for {
 		r := l.peek()
+		if r == '\n' || r == eof {
+			return l.errorf("unexpected input: wanted '=', got %q", r)
+		}
 		if r == '=' {
 			break
 		}
@@ -221,11 +233,11 @@ func lexKey(l *lexer) stateFunc {
 }
 
 func lexAssignment(l *lexer) stateFunc {
-	if l.next() == '=' {
-		l.emit(tokenAssignment)
-	} else {
-		l.errorf("ini: invalid character: line %v: '%v'", l.line, l.current())
+	r := l.next()
+	if r != '=' {
+		l.errorf("unexpected input: wanted '=', got %q", r)
 	}
+	l.emit(tokenAssignment)
 	return lexText
 }
 
