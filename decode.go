@@ -48,6 +48,9 @@ func (e *UnmarshalTypeError) Error() string {
 // decoded into the destination field as an element in the slice. Under these
 // circumstances, the section name is not decoded. However, if a struct field
 // named "SectionName" is encountered, the section name decoded into that field.
+//
+// A struct field tag containing "omitempty" will set the destination field to
+// its type's zero value if no corresponding property key was encountered.
 func Unmarshal(data []byte, v interface{}) error {
 	return unmarshal(data, v, Options{})
 }
@@ -102,6 +105,9 @@ func decode(ast ast, rv reflect.Value) error {
 		switch sf.Type.Kind() {
 		case reflect.Struct:
 			sv := rv.Field(i).Addr()
+			if t.omitempty && len(ast[t.name]) == 0 {
+				continue
+			}
 			val := ast[t.name][0]
 			if err := decodeStruct(val, sv); err != nil {
 				return err
@@ -129,6 +135,9 @@ func decode(ast ast, rv reflect.Value) error {
 					val = ast[t.name]
 				}
 			default:
+				if t.omitempty && len(ast[""][0].props[t.name].val) == 0 {
+					continue
+				}
 				val = ast[""][0].props[t.name].val
 			}
 			if err := decodeSlice(val, sv); err != nil {
@@ -136,12 +145,18 @@ func decode(ast ast, rv reflect.Value) error {
 			}
 		case reflect.String:
 			sv := rv.Field(i).Addr()
+			if t.omitempty && len(ast[""][0].props[t.name].val) == 0 {
+				continue
+			}
 			val := ast[""][0].props[t.name].val[0]
 			if err := decodeString(val, sv); err != nil {
 				return err
 			}
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			sv := rv.Field(i).Addr()
+			if t.omitempty && len(ast[""][0].props[t.name].val) == 0 {
+				continue
+			}
 			val := ast[""][0].props[t.name].val[0]
 			if err := decodeInt(val, sv); err != nil {
 				return err
@@ -172,6 +187,10 @@ func decodeStruct(i interface{}, rv reflect.Value) error {
 
 		t := newTag(sf)
 		if t.name == "-" {
+			continue
+		}
+
+		if t.omitempty && len(s.props[t.name].val) == 0 {
 			continue
 		}
 
