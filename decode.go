@@ -161,6 +161,15 @@ func decode(ast ast, rv reflect.Value) error {
 			if err := decodeInt(val, sv); err != nil {
 				return err
 			}
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			sv := rv.Field(i).Addr()
+			if t.omitempty && len(ast[""][0].props[t.name].val) == 0 {
+				continue
+			}
+			val := ast[""][0].props[t.name].val[0]
+			if err := decodeUint(val, sv); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -218,6 +227,12 @@ func decodeStruct(i interface{}, rv reflect.Value) error {
 			if err := decodeInt(val, sv); err != nil {
 				return err
 			}
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			sv := rv.Field(i).Addr()
+			val := s.props[t.name].val[0]
+			if err := decodeUint(val, sv); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -243,6 +258,8 @@ func decodeSlice(v interface{}, rv reflect.Value) error {
 		decoderFunc = decodeString
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		decoderFunc = decodeInt
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		decoderFunc = decodeUint
 	case reflect.Struct:
 		decoderFunc = decodeStruct
 	default:
@@ -306,5 +323,32 @@ func decodeInt(i interface{}, rv reflect.Value) error {
 	}
 
 	rv.Elem().SetInt(n)
+	return nil
+}
+
+// decodeUint sets the underlying value of the value to which rv points to the
+// concrete value stored in i. If rv is not a reflect.Ptr, decodeUint returns
+// UnmarshalTypeError.
+func decodeUint(i interface{}, rv reflect.Value) error {
+	if reflect.TypeOf(i).Kind() != reflect.String || rv.Type().Kind() != reflect.Ptr {
+		return &UnmarshalTypeError{
+			Value: reflect.ValueOf(i).String(),
+			Type:  rv.Type(),
+		}
+	}
+
+	n, err := strconv.ParseUint(i.(string), 10, 64)
+	if err != nil {
+		switch err.(*strconv.NumError).Err {
+		case strconv.ErrRange:
+		default:
+			return &UnmarshalTypeError{
+				Value: reflect.ValueOf(i).String(),
+				Type:  rv.Type(),
+			}
+		}
+	}
+
+	rv.Elem().SetUint(n)
 	return nil
 }
