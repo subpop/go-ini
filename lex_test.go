@@ -9,6 +9,7 @@ func TestLexerNextToken(t *testing.T) {
 		desc  string
 		input string
 		want  []token
+		opts  lexerOptions
 	}{
 		{
 			desc:  "simple case",
@@ -55,10 +56,33 @@ func TestLexerNextToken(t *testing.T) {
 				{typ: tokenError, val: `unexpected input: wanted '=', got '\x00'`},
 			},
 		},
+		{
+			desc:  "whitespace multiline values",
+			input: `shell=/bin/bash\n /bin/zsh`,
+			want: []token{
+				{typ: tokenKey, val: "shell"},
+				{typ: tokenAssignment, val: "="},
+				{typ: tokenText, val: `/bin/bash\n /bin/zsh`},
+				{typ: tokenEOF, val: ""},
+			},
+			opts: lexerOptions{allowMultilineWhitespacePrefix: true},
+		},
+		{
+			desc:  "escaped newline multiline values",
+			input: `shell=/bin/bash\\n/bin/zsh`,
+			want: []token{
+				{typ: tokenKey, val: "shell"},
+				{typ: tokenAssignment, val: "="},
+				{typ: tokenText, val: `/bin/bash\\n/bin/zsh`},
+				{typ: tokenEOF, val: ""},
+			},
+			opts: lexerOptions{allowMultilineEscapeNewline: true},
+		},
 	}
 
 	for _, test := range tests {
 		l := lex(test.input)
+		l.opts = test.opts
 		var i int
 		for {
 			got := l.nextToken()
