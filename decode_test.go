@@ -437,7 +437,7 @@ group=video`,
 		}
 
 		if !cmp.Equal(got, test.want) {
-			t.Errorf("%v != %v", got, test.want)
+			t.Errorf("%+v != %+v", got, test.want)
 		}
 	}
 }
