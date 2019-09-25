@@ -170,6 +170,15 @@ func decode(ast ast, rv reflect.Value) error {
 			if err := decodeUint(val, sv); err != nil {
 				return err
 			}
+		case reflect.Float32, reflect.Float64:
+			sv := rv.Field(i).Addr()
+			if t.omitempty && len(ast[""][0].props[t.name].val) == 0 {
+				continue
+			}
+			val := ast[""][0].props[t.name].val[0]
+			if err := decodeFloat(val, sv); err != nil {
+				return err
+			}
 		case reflect.Bool:
 			sv := rv.Field(i).Addr()
 			if t.omitempty && len(ast[""][0].props[t.name].val) == 0 {
@@ -242,6 +251,12 @@ func decodeStruct(i interface{}, rv reflect.Value) error {
 			if err := decodeUint(val, sv); err != nil {
 				return err
 			}
+		case reflect.Float32, reflect.Float64:
+			sv := rv.Field(i).Addr()
+			val := s.props[t.name].val[0]
+			if err := decodeFloat(val, sv); err != nil {
+				return err
+			}
 		case reflect.Bool:
 			sv := rv.Field(i).Addr()
 			val := s.props[t.name].val[0]
@@ -277,6 +292,8 @@ func decodeSlice(v interface{}, rv reflect.Value) error {
 		decoderFunc = decodeUint
 	case reflect.Struct:
 		decoderFunc = decodeStruct
+	case reflect.Float32, reflect.Float64:
+		decoderFunc = decodeFloat
 	case reflect.Bool:
 		decoderFunc = decodeBool
 	default:
@@ -390,5 +407,28 @@ func decodeBool(i interface{}, rv reflect.Value) error {
 	}
 
 	rv.Elem().SetBool(n)
+	return nil
+}
+
+// decodeFloat sets the underlying value of the value to which rv points to the
+// concrete value stored in i. If rv is not a reflect.Ptr, decodeFloat returns
+// UnmarshalTypeError.
+func decodeFloat(i interface{}, rv reflect.Value) error {
+	if reflect.TypeOf(i).Kind() != reflect.String || rv.Type().Kind() != reflect.Ptr {
+		return &UnmarshalTypeError{
+			Value: reflect.ValueOf(i).String(),
+			Type:  rv.Type(),
+		}
+	}
+
+	n, err := strconv.ParseFloat(i.(string), 64)
+	if err != nil {
+		return &UnmarshalTypeError{
+			Value: reflect.ValueOf(i).String(),
+			Type:  rv.Type(),
+		}
+	}
+
+	rv.Elem().SetFloat(n)
 	return nil
 }

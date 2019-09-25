@@ -187,6 +187,49 @@ func TestDecodeBool(t *testing.T) {
 	}
 }
 
+func TestDecodeFloat(t *testing.T) {
+	tests := []struct {
+		input       string
+		want        float64
+		shouldError bool
+		wantError   error
+	}{
+		{
+			input: "42.2",
+			want:  float64(42.2),
+		},
+		{
+			input:       "forty-two",
+			want:        float64(42.2),
+			shouldError: true,
+			wantError: &UnmarshalTypeError{
+				Value: reflect.ValueOf("forty-two").String(),
+				Type:  reflect.PtrTo(reflect.TypeOf(float64(42.2))),
+			},
+		},
+	}
+
+	for _, test := range tests {
+		var got float64
+		rv := reflect.ValueOf(&got)
+
+		err := decodeFloat(test.input, rv)
+
+		if test.shouldError {
+			if !reflect.DeepEqual(err, test.wantError) {
+				t.Errorf("%v != %v", err, test.wantError)
+			}
+		} else {
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got != test.want {
+				t.Errorf("%v != %v", got, test.want)
+			}
+		}
+	}
+}
+
 func TestDecodeStruct(t *testing.T) {
 	type user struct {
 		Shell  string   `ini:"shell"`
