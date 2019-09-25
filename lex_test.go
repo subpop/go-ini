@@ -31,13 +31,16 @@ func TestLexerNextToken(t *testing.T) {
 		},
 		{
 			desc:  "complete case",
-			input: "; user\n[user]\nshell=/bin/bash",
+			input: "; user\n[user]\nshell=/bin/bash\ngroup=wheel",
 			want: []token{
 				{typ: tokenComment, val: `; user`},
 				{typ: tokenSection, val: "user"},
 				{typ: tokenKey, val: "shell"},
 				{typ: tokenAssignment, val: "="},
 				{typ: tokenText, val: "/bin/bash"},
+				{typ: tokenKey, val: "group"},
+				{typ: tokenAssignment, val: "="},
+				{typ: tokenText, val: "wheel"},
 				{typ: tokenEOF, val: ""},
 			},
 		},
@@ -66,11 +69,14 @@ func TestLexerNextToken(t *testing.T) {
 		},
 		{
 			desc:  "whitespace multiline values",
-			input: "shell=/bin/bash\n /bin/zsh",
+			input: "shell=/bin/bash\n /bin/zsh\ngroup=wheel",
 			want: []token{
 				{typ: tokenKey, val: "shell"},
 				{typ: tokenAssignment, val: "="},
 				{typ: tokenText, val: "/bin/bash\n /bin/zsh"},
+				{typ: tokenKey, val: "group"},
+				{typ: tokenAssignment, val: "="},
+				{typ: tokenText, val: "wheel"},
 				{typ: tokenEOF, val: ""},
 			},
 			opts: lexerOptions{allowMultilineWhitespacePrefix: true},

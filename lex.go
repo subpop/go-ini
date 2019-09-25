@@ -232,9 +232,10 @@ func lexText(l *lexer) stateFunc {
 	}
 	if l.opts.allowMultilineWhitespacePrefix {
 		l.next()
-		if l.peek() == ' ' {
+		if l.peek() == ' ' || l.peek() == '\t' {
 			return lexText
 		}
+		l.prev()
 	}
 	if l.opts.allowMultilineEscapeNewline {
 		r := l.rpeek()
