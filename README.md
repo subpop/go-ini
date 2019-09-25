@@ -1,6 +1,7 @@
 # go-ini
 
 [![GoDoc](https://godoc.org/github.com/subpop/go-ini?status.svg)](https://godoc.org/github.com/subpop/go-ini)
+[![Build Status](https://travis-ci.org/subpop/go-ini.svg?branch=master)](https://travis-ci.org/subpop/go-ini)
 
 A Go package that encodes and decodes INI-files.
 
