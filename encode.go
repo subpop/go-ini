@@ -64,7 +64,7 @@ func (e *MarshalerError) Error() string {
 //
 // Boolean values encode as the string literal "true" or "false".
 //
-// Floating point, integer and Number values enocded as string representations.
+// Floating point, integer and Number values encoded as string representations.
 //
 // String values encode as valid UTF-8 strings.
 //
@@ -204,6 +204,8 @@ func encodeProperty(buf *bytes.Buffer, key string, rv reflect.Value) error {
 			data = []byte(strconv.FormatInt(rv.Int(), 10))
 		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 			data = []byte(strconv.FormatUint(rv.Uint(), 10))
+		case reflect.Float32, reflect.Float64:
+			data = []byte(strconv.FormatFloat(rv.Float(), 'g', -1, 64))
 		case reflect.Bool:
 			data = []byte(strconv.FormatBool(rv.Bool()))
 		default:

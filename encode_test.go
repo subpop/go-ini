@@ -12,6 +12,7 @@ func TestMarshal(t *testing.T) {
 		Port      int
 		Encrypted bool
 		Size      uint
+		Value     float64
 	}
 
 	tests := []struct {
@@ -29,9 +30,10 @@ func TestMarshal(t *testing.T) {
 					Port:      143,
 					Encrypted: false,
 					Size:      1234,
+					Value:     12.34,
 				},
 			},
-			want: []byte("[Database]\nServer=192.0.2.62\nPort=143\nEncrypted=false\nSize=1234"),
+			want: []byte("[Database]\nServer=192.0.2.62\nPort=143\nEncrypted=false\nSize=1234\nValue=12.34"),
 		},
 	}
 
