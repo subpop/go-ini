@@ -22,6 +22,14 @@ func TestLexerNextToken(t *testing.T) {
 			},
 		},
 		{
+			desc:  "section",
+			input: "[user]",
+			want: []token{
+				{typ: tokenSection, val: "user"},
+				{typ: tokenEOF, val: ""},
+			},
+		},
+		{
 			desc:  "complete case",
 			input: "; user\n[user]\nshell=/bin/bash",
 			want: []token{
@@ -58,22 +66,22 @@ func TestLexerNextToken(t *testing.T) {
 		},
 		{
 			desc:  "whitespace multiline values",
-			input: `shell=/bin/bash\n /bin/zsh`,
+			input: "shell=/bin/bash\n /bin/zsh",
 			want: []token{
 				{typ: tokenKey, val: "shell"},
 				{typ: tokenAssignment, val: "="},
-				{typ: tokenText, val: `/bin/bash\n /bin/zsh`},
+				{typ: tokenText, val: "/bin/bash\n /bin/zsh"},
 				{typ: tokenEOF, val: ""},
 			},
 			opts: lexerOptions{allowMultilineWhitespacePrefix: true},
 		},
 		{
 			desc:  "escaped newline multiline values",
-			input: `shell=/bin/bash\\n/bin/zsh`,
+			input: "shell=/bin/bash\\\n/bin/zsh",
 			want: []token{
 				{typ: tokenKey, val: "shell"},
 				{typ: tokenAssignment, val: "="},
-				{typ: tokenText, val: `/bin/bash\\n/bin/zsh`},
+				{typ: tokenText, val: "/bin/bash\\\n/bin/zsh"},
 				{typ: tokenEOF, val: ""},
 			},
 			opts: lexerOptions{allowMultilineEscapeNewline: true},

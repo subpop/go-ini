@@ -152,7 +152,8 @@ func lexLineStart(l *lexer) stateFunc {
 	case r == '[':
 		return lexSection
 	case r == '\n':
-		return lexLineEnd
+		l.ignore()
+		return lexLineStart
 	case unicode.IsLetter(r) || unicode.IsDigit(r):
 		return lexKey
 	case r == '\t':
@@ -161,30 +162,6 @@ func lexLineStart(l *lexer) stateFunc {
 	default:
 		return l.errorf("unexpected input: line %v: %q", l.line, r)
 	}
-}
-
-func lexLineEnd(l *lexer) stateFunc {
-	if l.opts.allowMultilineWhitespacePrefix && l.peek() == ' ' {
-		l.next()
-		return lexText
-	}
-
-	if l.opts.allowMultilineEscapeNewline && l.rpeek() == '\\' {
-		l.next()
-		return lexText
-	}
-
-	if l.rpeek() == '\n' {
-		l.ignore()
-		return lexLineStart
-	}
-
-	if len(l.current()) == 0 && !l.opts.allowEmptyValues {
-		return l.errorf("invalid token: empty value")
-	}
-
-	l.emit(tokenText)
-	return lexLineStart
 }
 
 func lexComment(l *lexer) stateFunc {
@@ -244,10 +221,25 @@ func lexAssignment(l *lexer) stateFunc {
 func lexText(l *lexer) stateFunc {
 	for {
 		r := l.peek()
-		if r == '\n' || r == eof {
+		if r == eof {
 			break
 		}
-		r = l.next()
+		if r == '\n' {
+			if l.opts.allowMultilineWhitespacePrefix {
+				l.next()
+				if l.peek() != ' ' {
+					break
+				}
+			}
+			if l.opts.allowMultilineEscapeNewline && l.rpeek() != '\\' {
+				break
+			}
+		}
+		l.next()
 	}
-	return lexLineEnd
+	if !l.opts.allowEmptyValues && len(l.current()) == 0 {
+		l.errorf("invalid token: empty value")
+	}
+	l.emit(tokenText)
+	return lexLineStart
 }
