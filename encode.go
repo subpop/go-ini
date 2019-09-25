@@ -202,6 +202,8 @@ func encodeProperty(buf *bytes.Buffer, key string, rv reflect.Value) error {
 			data = []byte(rv.String())
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			data = []byte(strconv.FormatInt(rv.Int(), 10))
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			data = []byte(strconv.FormatUint(rv.Uint(), 10))
 		case reflect.Bool:
 			if rv.Bool() {
 				data = []byte("true")
