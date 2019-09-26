@@ -94,98 +94,61 @@ func decode(ast ast, rv reflect.Value) error {
 		}
 	}
 
+	/* global properties */
+	sectionGroup, err := ast.getSection("")
+	if err != nil {
+		return err
+	}
+	if len(sectionGroup) >= 0 {
+		if err := decodeStruct(sectionGroup[0], rv.Addr()); err != nil {
+			return err
+		}
+	}
+
 	for i := 0; i < rv.NumField(); i++ {
 		sf := rv.Type().Field(i)
+		sv := rv.Field(i).Addr()
 
 		t := newTag(sf)
 		if t.name == "-" {
 			continue
 		}
+		if t.omitempty && len(ast[t.name]) == 0 {
+			continue
+		}
 
 		switch sf.Type.Kind() {
 		case reflect.Struct:
-			sv := rv.Field(i).Addr()
-			if t.omitempty && len(ast[t.name]) == 0 {
+			sectionGroup, err := ast.getSection(t.name)
+			if err != nil {
+				return err
+			}
+			if len(sectionGroup) == 0 {
 				continue
 			}
-			val := ast[t.name][0]
+			val := sectionGroup[0]
 			if err := decodeStruct(val, sv); err != nil {
 				return err
 			}
 		case reflect.Slice:
-			sv := rv.Field(i).Addr()
+			if sf.Type.Elem().Kind() != reflect.Struct {
+				continue
+			}
 			var val interface{}
-			switch sf.Type.Elem().Kind() {
-			case reflect.Struct:
-				var r *regexp.Regexp
-				r, err := t.pattern()
+			var r *regexp.Regexp
+			r, err = t.pattern()
+			if err != nil {
+				return err
+			}
+			if r != nil {
+				val = ast.getSectionMatch(r)
+			} else {
+				val, err = ast.getSection(t.name)
 				if err != nil {
 					return err
 				}
-				if r != nil {
-					val = make([]section, 0)
-					for k, v := range ast {
-						if k != "" && r.MatchString(k) {
-							for _, s := range v {
-								val = append(val.([]section), s)
-							}
-						}
-					}
-				} else {
-					val = ast[t.name]
-				}
-			default:
-				if t.omitempty && len(ast[""][0].props[t.name].val) == 0 {
-					continue
-				}
-				val = ast[""][0].props[t.name].val
 			}
 			if err := decodeSlice(val, sv); err != nil {
-				return err
-			}
-		case reflect.String:
-			sv := rv.Field(i).Addr()
-			if t.omitempty && len(ast[""][0].props[t.name].val) == 0 {
-				continue
-			}
-			val := ast[""][0].props[t.name].val[0]
-			if err := decodeString(val, sv); err != nil {
-				return err
-			}
-		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			sv := rv.Field(i).Addr()
-			if t.omitempty && len(ast[""][0].props[t.name].val) == 0 {
-				continue
-			}
-			val := ast[""][0].props[t.name].val[0]
-			if err := decodeInt(val, sv); err != nil {
-				return err
-			}
-		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			sv := rv.Field(i).Addr()
-			if t.omitempty && len(ast[""][0].props[t.name].val) == 0 {
-				continue
-			}
-			val := ast[""][0].props[t.name].val[0]
-			if err := decodeUint(val, sv); err != nil {
-				return err
-			}
-		case reflect.Float32, reflect.Float64:
-			sv := rv.Field(i).Addr()
-			if t.omitempty && len(ast[""][0].props[t.name].val) == 0 {
-				continue
-			}
-			val := ast[""][0].props[t.name].val[0]
-			if err := decodeFloat(val, sv); err != nil {
-				return err
-			}
-		case reflect.Bool:
-			sv := rv.Field(i).Addr()
-			if t.omitempty && len(ast[""][0].props[t.name].val) == 0 {
-				continue
-			}
-			val := ast[""][0].props[t.name].val[0]
-			if err := decodeBool(val, sv); err != nil {
 				return err
 			}
 		}
@@ -208,7 +171,6 @@ func decodeStruct(i interface{}, rv reflect.Value) error {
 	s := i.(section)
 	rv = rv.Elem()
 
-	/* magic */
 	for i := 0; i < rv.NumField(); i++ {
 		sf := rv.Type().Field(i)
 
