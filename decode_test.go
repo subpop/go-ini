@@ -4,6 +4,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/google/go-cmp/cmp/cmpopts"
+
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -707,7 +709,12 @@ notes=Debian 10 (buster)
 			t.Fatal(err)
 		}
 
-		if !cmp.Equal(got, test.want) {
+		opts := cmp.Options{
+			cmpopts.SortSlices(func(x, y image) bool {
+				return x.SectionName > y.SectionName
+			}),
+		}
+		if !cmp.Equal(got, test.want, opts) {
 			t.Errorf("%+v != %+v", got, test.want)
 		}
 	}
