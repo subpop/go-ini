@@ -173,6 +173,7 @@ func decodeStruct(i interface{}, rv reflect.Value) error {
 
 	for i := 0; i < rv.NumField(); i++ {
 		sf := rv.Type().Field(i)
+		sv := rv.Field(i).Addr()
 
 		t := newTag(sf)
 		if t.name == "-" {
@@ -185,43 +186,82 @@ func decodeStruct(i interface{}, rv reflect.Value) error {
 
 		switch sf.Type.Kind() {
 		case reflect.Slice:
-			sv := rv.Field(i).Addr()
-			val := s.props[t.name].val
+			if sf.Type.Elem().Kind() == reflect.Struct {
+				continue
+			}
+			prop, err := s.getProperty(t.name)
+			if err != nil {
+				return err
+			}
+			if len(prop.val) == 0 {
+				continue
+			}
+			val := prop.val
 			if err := decodeSlice(val, sv); err != nil {
 				return err
 			}
 		case reflect.String:
-			sv := rv.Field(i).Addr()
 			var val string
 			if sf.Name == "SectionName" {
 				val = s.name
 			} else {
-				val = s.props[t.name].val[0]
+				prop, err := s.getProperty(t.name)
+				if err != nil {
+					return err
+				}
+				if len(prop.val) == 0 {
+					continue
+				}
+				val = prop.val[0]
 			}
 			if err := decodeString(val, sv); err != nil {
 				return err
 			}
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			sv := rv.Field(i).Addr()
-			val := s.props[t.name].val[0]
+			prop, err := s.getProperty(t.name)
+			if err != nil {
+				return err
+			}
+			if len(prop.val) == 0 {
+				continue
+			}
+			val := prop.val[0]
 			if err := decodeInt(val, sv); err != nil {
 				return err
 			}
 		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			sv := rv.Field(i).Addr()
-			val := s.props[t.name].val[0]
+			prop, err := s.getProperty(t.name)
+			if err != nil {
+				return err
+			}
+			if len(prop.val) == 0 {
+				continue
+			}
+			val := prop.val[0]
 			if err := decodeUint(val, sv); err != nil {
 				return err
 			}
 		case reflect.Float32, reflect.Float64:
-			sv := rv.Field(i).Addr()
-			val := s.props[t.name].val[0]
+			prop, err := s.getProperty(t.name)
+			if err != nil {
+				return err
+			}
+			if len(prop.val) == 0 {
+				continue
+			}
+			val := prop.val[0]
 			if err := decodeFloat(val, sv); err != nil {
 				return err
 			}
 		case reflect.Bool:
-			sv := rv.Field(i).Addr()
-			val := s.props[t.name].val[0]
+			prop, err := s.getProperty(t.name)
+			if err != nil {
+				return err
+			}
+			if len(prop.val) == 0 {
+				continue
+			}
+			val := prop.val[0]
 			if err := decodeBool(val, sv); err != nil {
 				return err
 			}
