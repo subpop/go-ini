@@ -2,7 +2,6 @@ package ini
 
 import (
 	"fmt"
-	"regexp"
 )
 
 type missingSectionErr struct {
@@ -21,43 +20,38 @@ func (e *missingPropertyErr) Error() string {
 	return fmt.Sprintf("parse error: missing property key %q", e.key)
 }
 
-type ast map[string][]section
+type missingSubkeyErr struct {
+	p      property
+	subkey string
+}
 
-// newAST returns an AST containing a single-element, global property section.
-func newAST() ast {
-	return ast{
+func (e *missingSubkeyErr) Error() string {
+	return "property '" + e.p.key + "' missing subkey '" + e.subkey + "'"
+}
+
+type parseTree map[string][]section
+
+func newParseTree() parseTree {
+	return parseTree{
 		"": []section{newSection("")},
 	}
 }
 
-func (a ast) addSection(s section) {
-	sec, ok := a[s.name]
+func (p parseTree) add(s section) {
+	sections, ok := p[s.name]
 	if !ok {
-		sec = make([]section, 0)
+		sections = make([]section, 0)
 	}
-	sec = append(sec, s)
-	a[s.name] = sec
+	sections = append(sections, s)
+	p[s.name] = sections
 }
 
-func (a ast) getSection(name string) ([]section, error) {
-	sections, ok := a[name]
+func (p parseTree) get(name string) ([]section, error) {
+	sections, ok := p[name]
 	if !ok {
 		return nil, &missingSectionErr{name}
 	}
 	return sections, nil
-}
-
-func (a ast) getSectionMatch(r *regexp.Regexp) []section {
-	sections := make([]section, 0)
-	for name, section := range a {
-		if name == "" {
-			continue
-		}
-		if r.MatchString(name) {
-			sections = append(sections, section...)
-		}
-	}
-	return sections
 }
 
 type section struct {
@@ -72,17 +66,11 @@ func newSection(name string) section {
 	}
 }
 
-func (s section) addProperty(p property) {
-	prop, ok := s.props[p.key]
-	if !ok {
-		prop = newProperty(p.key)
-	}
-	prop.val = append(prop.val, p.val...)
-
-	s.props[p.key] = prop
+func (s section) add(p property) {
+	s.props[p.key] = p
 }
 
-func (s section) getProperty(key string) (*property, error) {
+func (s section) get(key string) (*property, error) {
 	prop, ok := s.props[key]
 	if !ok {
 		return nil, &missingPropertyErr{key}
@@ -91,17 +79,32 @@ func (s section) getProperty(key string) (*property, error) {
 }
 
 type property struct {
-	key string
-	val []string
+	key  string
+	vals map[string][]string
 }
 
 func newProperty(key string) property {
 	return property{
 		key: key,
-		val: make([]string, 0),
+		vals: map[string][]string{
+			"": []string{},
+		},
 	}
 }
 
-func (p *property) appendVal(s string) {
-	p.val = append(p.val, s)
+func (p *property) append(subkey string, values ...string) {
+	v, ok := p.vals[subkey]
+	if !ok {
+		v = make([]string, 0)
+	}
+	v = append(v, values...)
+	p.vals[subkey] = v
+}
+
+func (p property) values(subkey string) ([]string, error) {
+	values, ok := p.vals[subkey]
+	if !ok {
+		return nil, &missingSubkeyErr{p, subkey}
+	}
+	return values, nil
 }
