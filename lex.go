@@ -6,19 +6,73 @@ import (
 	"unicode/utf8"
 )
 
+type unexpectedCharErr struct {
+	want rune
+	got  rune
+}
+
+func (e *unexpectedCharErr) Error() string {
+	return fmt.Sprintf("unexpected character: %q (expected %q)", e.got, e.want)
+}
+
+type invalidTokenErr struct {
+	typ tokenType
+	val string
+}
+
+func (e *invalidTokenErr) Error() string {
+	return "invalid token: " + e.typ.String() + "(" + e.val + ")"
+}
+
 type tokenType int
+
+func (t tokenType) String() string {
+	switch t {
+	case tokenError:
+		return "tokenError"
+	case tokenPropKey:
+		return "tokenPropKey"
+	case tokenMapKey:
+		return "tokenMapKey"
+	case tokenAssignment:
+		return "tokenAssignment"
+	case tokenPropValue:
+		return "tokenPropValue"
+	case tokenSection:
+		return "tokenSection"
+	case tokenComment:
+		return "tokenComment"
+	case tokenEOF:
+		return "tokenEOF"
+	default:
+		panic("lexer: undefined token")
+	}
+}
 
 const (
 	tokenError tokenType = iota
-	tokenKey
+	tokenPropKey
+	tokenMapKey
 	tokenAssignment
-	tokenText
+	tokenPropValue
 	tokenSection
 	tokenComment
 	tokenEOF
 )
 
-const eof = rune(0)
+const (
+	eof          = rune(0)
+	comment      = ';'
+	sectionStart = '['
+	sectionEnd   = ']'
+	mapKeyStart  = '['
+	mapKeyEnd    = ']'
+	assignment   = '='
+	eol          = '\n'
+	escape       = rune(92) // backslash
+	space        = ' '
+	tab          = '\t'
+)
 
 type stateFunc func(l *lexer) stateFunc
 
@@ -35,11 +89,9 @@ type lexerOptions struct {
 
 type lexer struct {
 	input  string // the string being scanned.
-	start  int    // start position of this item.
+	start  int    // start position of current token.
 	pos    int    // current position in the input.
-	width  int    // width of last run read.
-	line   int    // current line number in the input.
-	col    int    // current column in the current line.
+	width  int    // width of last rune read.
 	state  stateFunc
 	tokens chan token
 	opts   lexerOptions
@@ -49,7 +101,6 @@ func lex(input string) *lexer {
 	l := &lexer{
 		input:  input,
 		state:  lexLineStart,
-		line:   1,
 		tokens: make(chan token, 2),
 	}
 	return l
@@ -63,12 +114,6 @@ func (l *lexer) next() rune {
 		return eof
 	}
 
-	if l.input[l.pos] == '\n' {
-		l.line++
-		l.col = 0
-	}
-	l.col++
-
 	r, w := utf8.DecodeRuneInString(l.input[l.pos:])
 	l.width = w
 	l.pos += l.width
@@ -79,11 +124,7 @@ func (l *lexer) next() rune {
 // the rune width.
 func (l *lexer) prev() rune {
 	l.pos -= l.width
-	l.col--
-	if l.pos < len(l.input) && l.input[l.pos] == '\n' {
-		l.line--
-		l.col = 0
-	}
+
 	r, w := utf8.DecodeRuneInString(l.input[l.pos:])
 	l.width = w
 	return r
@@ -91,15 +132,20 @@ func (l *lexer) prev() rune {
 
 // peek returns the next rune from the input without advancing the position
 func (l *lexer) peek() rune {
-	r := l.next()
-	l.prev()
+	if l.pos >= len(l.input) {
+		l.width = 0
+		return eof
+	}
+	r, _ := utf8.DecodeRuneInString(l.input[l.pos:])
 	return r
 }
 
 // rpeek returns the previous rune from the input without moving the position
 func (l *lexer) rpeek() rune {
-	r := l.prev()
-	l.next()
+	if l.pos <= 0 {
+		l.pos = l.width
+	}
+	r, _ := utf8.DecodeRuneInString(l.input[l.pos-l.width:])
 	return r
 }
 
@@ -121,11 +167,11 @@ func (l *lexer) ignore() {
 	l.start = l.pos
 }
 
-// errorf formats and returns an error in the form of a stateFunc.
-func (l *lexer) errorf(format string, args ...interface{}) stateFunc {
+// error returns an error in the form of a stateFunc.
+func (l *lexer) error(err error) stateFunc {
 	l.tokens <- token{
 		tokenError,
-		fmt.Sprintf(format, args...),
+		err.Error(),
 	}
 	return nil
 }
@@ -148,46 +194,45 @@ func lexLineStart(l *lexer) stateFunc {
 	case r == eof:
 		l.emit(tokenEOF)
 		return nil
-	case r == ';':
+	case r == comment:
 		return lexComment
-	case r == '[':
+	case r == sectionStart:
 		return lexSection
-	case r == '\n':
+	case unicode.IsSpace(r):
 		l.ignore()
 		return lexLineStart
 	case unicode.IsLetter(r) || unicode.IsDigit(r):
-		return lexKey
-	case r == '\t':
-		l.ignore()
-		return lexLineStart
+		return lexPropKey
 	default:
-		return l.errorf("unexpected input: line %v: %q", l.line, r)
+		return l.error(&unexpectedCharErr{got: r})
 	}
 }
 
 func lexComment(l *lexer) stateFunc {
+	var r rune
 	for {
-		r := l.peek()
-		if r == '\n' || r == eof {
+		r = l.peek()
+		if r == eol || r == eof {
 			break
 		}
-		r = l.next()
+		l.next()
 	}
 	l.emit(tokenComment)
 	return lexLineStart
 }
 
 func lexSection(l *lexer) stateFunc {
+	var r rune
 	l.ignore()
 	for {
-		r := l.peek()
-		if r == '\n' || r == eof {
-			return l.errorf("unexpected input: wanted ']', got %q", r)
+		r = l.peek()
+		if r == eol || r == eof {
+			return l.error(&unexpectedCharErr{want: sectionEnd, got: r})
 		}
-		if r == ']' {
+		if r == sectionEnd {
 			break
 		}
-		r = l.next()
+		l.next()
 	}
 	l.emit(tokenSection)
 	l.next()
@@ -195,55 +240,83 @@ func lexSection(l *lexer) stateFunc {
 	return lexLineStart
 }
 
-func lexKey(l *lexer) stateFunc {
+func lexPropKey(l *lexer) stateFunc {
+	var r rune
 	for {
-		r := l.peek()
-		if r == '\n' || r == eof {
-			return l.errorf("unexpected input: wanted '=', got %q", r)
+		r = l.peek()
+		if r == eol || r == eof {
+			return l.error(&unexpectedCharErr{want: assignment, got: r})
 		}
-		if r == '=' {
+		if r == assignment || r == mapKeyStart {
+			break
+		}
+		l.next()
+	}
+	l.emit(tokenPropKey)
+	if r == mapKeyStart {
+		return lexMapKey
+	}
+	return lexAssignment
+}
+
+func lexMapKey(l *lexer) stateFunc {
+	var r rune
+	l.next()
+	l.ignore()
+	for {
+		r = l.peek()
+		if r == eol || r == eof {
+			return l.error(&unexpectedCharErr{want: mapKeyEnd, got: r})
+		}
+		if r == mapKeyEnd {
 			break
 		}
 		r = l.next()
 	}
-	l.emit(tokenKey)
+	l.emit(tokenMapKey)
+	l.next()
+	l.ignore()
 	return lexAssignment
 }
 
 func lexAssignment(l *lexer) stateFunc {
 	r := l.next()
-	if r != '=' {
-		l.errorf("unexpected input: wanted '=', got %q", r)
+	if r != assignment {
+		panic("lexer: invalid state encountered")
 	}
 	l.emit(tokenAssignment)
-	return lexText
+	return lexPropValue
 }
 
-func lexText(l *lexer) stateFunc {
+func lexPropValue(l *lexer) stateFunc {
+	var r rune
 	for {
-		r := l.peek()
-		if r == '\n' || r == eof {
+		r = l.peek()
+		if r == eol || r == eof {
 			break
 		}
 		l.next()
 	}
 	if !l.opts.allowEmptyValues && len(l.current()) == 0 {
-		l.errorf("invalid token: empty value")
+		l.error(&invalidTokenErr{
+			typ: tokenPropValue,
+			val: l.current(),
+		})
 	}
 	if l.opts.allowMultilineWhitespacePrefix {
 		l.next()
-		if l.peek() == ' ' || l.peek() == '\t' {
-			return lexText
+		if l.peek() == space || l.peek() == tab {
+			return lexPropValue
 		}
 		l.prev()
 	}
 	if l.opts.allowMultilineEscapeNewline {
 		r := l.rpeek()
-		if r == rune(92) /* backslash */ {
+		if r == escape {
 			l.next()
-			return lexText
+			return lexPropValue
 		}
 	}
-	l.emit(tokenText)
+	l.emit(tokenPropValue)
 	return lexLineStart
 }
