@@ -302,6 +302,21 @@ func TestPropertyAppend(t *testing.T) {
 				},
 			},
 		},
+		{
+			key: "Greeting",
+			values: map[string][]string{
+				"en": []string{"Hello"},
+				"fr": []string{"Bonjour"},
+			},
+			want: property{
+				key: "Greeting",
+				vals: map[string][]string{
+					"":   []string{},
+					"en": []string{"Hello"},
+					"fr": []string{"Bonjour"},
+				},
+			},
+		},
 	}
 
 	for _, test := range tests {
@@ -359,7 +374,7 @@ func TestPropertyValues(t *testing.T) {
 		got, err := prop.values(test.input)
 
 		if test.shouldError {
-			if !cmp.Equal(err, test.wantError) {
+			if !cmp.Equal(err, test.wantError, cmp.Options{cmp.AllowUnexported(missingSubkeyErr{}, property{})}) {
 				t.Errorf("%v != %v", err, test.wantError)
 			}
 		} else {
