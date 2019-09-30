@@ -1,6 +1,7 @@
 package ini
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -147,7 +148,7 @@ func TestParseTreeGet(t *testing.T) {
 		got, err := tree.get(test.input)
 
 		if test.shouldError {
-			if !cmp.Equal(err, test.wantError, cmp.Options{cmp.AllowUnexported(invalidKeyErr{})}) {
+			if !reflect.DeepEqual(err, test.wantError) {
 				t.Errorf("%v != %v", err, test.wantError)
 			}
 		} else {
@@ -282,7 +283,7 @@ func TestSectionGet(t *testing.T) {
 		got, err := sec.get(test.input)
 
 		if test.shouldError {
-			if !cmp.Equal(err, test.wantError, cmp.Options{cmp.AllowUnexported(invalidKeyErr{})}) {
+			if !reflect.DeepEqual(err, test.wantError) {
 				t.Errorf("%v != %v", err, test.wantError)
 			}
 		} else {
