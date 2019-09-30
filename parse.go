@@ -1,21 +1,29 @@
 package ini
 
 import (
+	"errors"
 	"fmt"
 )
 
-type errParse struct {
-	line int
-	col  int
-	s    string
+type unexpectedTokenErr struct {
+	got  token
+	want token
 }
 
-func (e *errParse) Error() string {
-	return fmt.Sprintf("parse:%v:%v: %v", e.line, e.col, e.s)
+func (e *unexpectedTokenErr) Error() string {
+	return fmt.Sprintf("unexpected token: %v, want %v", e.got, e.want)
+}
+
+type invalidPropertyErr struct {
+	p property
+}
+
+func (e *invalidPropertyErr) Error() string {
+	return "invalid property: " + e.p.key
 }
 
 type parser struct {
-	ast  ast
+	tree parseTree
 	l    *lexer
 	tok  token
 	prev *token
@@ -23,8 +31,8 @@ type parser struct {
 
 func newParser(data []byte) *parser {
 	p := parser{
-		ast: newAST(),
-		l:   lex(string(data)),
+		tree: newParseTree(),
+		l:    lex(string(data)),
 	}
 	return &p
 }
@@ -47,52 +55,56 @@ func (p *parser) parse() error {
 		if p.tok.typ == tokenEOF {
 			return nil
 		}
+
 		p.nextToken()
 		switch p.tok.typ {
 		case tokenEOF:
 			return nil
 		case tokenError:
-			return &errParse{p.l.line, p.l.col, p.tok.val}
+			return errors.New(p.tok.val)
 		case tokenSection:
 			sec := newSection(p.tok.val)
 			if err := p.parseSection(&sec); err != nil {
 				return err
 			}
-			p.ast.addSection(sec)
-			p.backup()
-		case tokenKey:
-			prop := newProperty(p.tok.val)
-			if err := p.parseProperty(&prop); err != nil {
+			p.tree.add(sec)
+		case tokenPropKey:
+			prop, err := p.tree.global.get(p.tok.val)
+			if err != nil {
 				return err
 			}
-			p.ast[""][0].addProperty(prop)
+			if err := p.parseProperty(prop); err != nil {
+				return err
+			}
+			p.tree.global.add(*prop)
+		default:
+			return &unexpectedTokenErr{got: p.tok}
 		}
 	}
 }
 
 func (p *parser) parseSection(out *section) error {
 	name := p.tok.val
-
-	if name != out.name {
-		panic(fmt.Sprintf("section name mismatch: expected '%v', got '%v'", name, out.name))
-	}
+	out.name = name
 
 	for {
-		if p.tok.typ == tokenEOF {
-			return nil
-		}
 		p.nextToken()
 		switch p.tok.typ {
-		case tokenEOF:
-			return nil
 		case tokenError:
-			return &errParse{p.l.line, p.l.col, p.tok.val}
-		case tokenKey:
-			prop := newProperty(p.tok.val)
-			if err := p.parseProperty(&prop); err != nil {
+			return errors.New(p.tok.val)
+		case tokenPropKey:
+			prop, err := out.get(p.tok.val)
+			if err != nil {
 				return err
 			}
-			out.addProperty(prop)
+			if err := p.parseProperty(prop); err != nil {
+				return err
+			}
+			out.add(*prop)
+		case tokenSection:
+			// we've parsed too far; backup so we can parse the next section
+			p.backup()
+			return nil
 		default:
 			return nil
 		}
@@ -101,23 +113,37 @@ func (p *parser) parseSection(out *section) error {
 
 func (p *parser) parseProperty(out *property) error {
 	key := p.tok.val
+	subkey := ""
 
 	p.nextToken()
+	if p.tok.typ == tokenMapKey {
+		subkey = p.tok.val
+		p.nextToken()
+	}
+
 	if p.tok.typ != tokenAssignment {
-		return &errParse{p.l.line, p.l.col, p.tok.val}
+		return &unexpectedTokenErr{
+			got: p.tok,
+			want: token{
+				typ: tokenAssignment,
+				val: "=",
+			},
+		}
 	}
 
 	p.nextToken()
-	if p.tok.typ != tokenText {
-		return &errParse{p.l.line, p.l.col, p.tok.val}
+	if p.tok.typ != tokenPropValue {
+		return &unexpectedTokenErr{
+			got: p.tok,
+			want: token{
+				typ: tokenPropValue,
+			},
+		}
 	}
 	val := p.tok.val
 
-	if key != out.key {
-		panic(fmt.Sprintf("property key mismatch: expected '%v', got '%v'", key, out.key))
-	}
-
-	out.val = append(out.val, val)
+	out.key = key
+	out.add(subkey, val)
 
 	return nil
 }

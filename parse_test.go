@@ -9,46 +9,27 @@ import (
 func TestParse(t *testing.T) {
 	tests := []struct {
 		input string
-		want  ast
+		want  parseTree
 	}{
 		{
-			input: "version=1.2.3\n\n[user]\nname=root\nshell=/bin/bash\n\n[user]\nname=admin\nshell=/bin/bash",
-			want: ast{
-				"": []section{
-					section{
-						name: "",
-						props: map[string]property{
-							"version": property{
-								key: "version",
-								val: []string{"1.2.3"},
-							},
-						},
-					},
-				},
-				"user": []section{
-					section{
-						name: "user",
-						props: map[string]property{
-							"name": property{
-								key: "name",
-								val: []string{"root"},
-							},
-							"shell": property{
-								key: "shell",
-								val: []string{"/bin/bash"},
-							},
-						},
-					},
-					section{
-						name: "user",
-						props: map[string]property{
-							"name": property{
-								key: "name",
-								val: []string{"admin"},
-							},
-							"shell": property{
-								key: "shell",
-								val: []string{"/bin/bash"},
+			input: "",
+			want:  newParseTree(),
+		},
+		{
+			input: "[user]\nshell=/bin/bash",
+			want: parseTree{
+				global: newSection(""),
+				sections: map[string][]section{
+					"user": []section{
+						{
+							name: "user",
+							props: map[string]property{
+								"shell": property{
+									key: "shell",
+									vals: map[string][]string{
+										"": []string{"/bin/bash"},
+									},
+								},
 							},
 						},
 					},
@@ -56,59 +37,63 @@ func TestParse(t *testing.T) {
 			},
 		},
 		{
-			input: `
-version=1.2.3
-
-[owner]
-name=John Doe
-organization=Acme Widgets Inc.
-
-[database]
-server=192.0.2.62
-port=143
-file="payroll.dat"`,
-			want: ast{
-				"": []section{
-					section{
-						name: "",
-						props: map[string]property{
-							"version": property{
-								key: "version",
-								val: []string{"1.2.3"},
+			input: "Greeting[en]=Hello\nGreeting[fr]=Bonjour",
+			want: parseTree{
+				global: section{
+					name: "",
+					props: map[string]property{
+						"Greeting": property{
+							key: "Greeting",
+							vals: map[string][]string{
+								"en": []string{"Hello"},
+								"fr": []string{"Bonjour"},
 							},
 						},
 					},
 				},
-				"owner": []section{
-					section{
-						name: "owner",
-						props: map[string]property{
-							"name": property{
-								key: "name",
-								val: []string{"John Doe"},
-							},
-							"organization": property{
-								key: "organization",
-								val: []string{"Acme Widgets Inc."},
+				sections: map[string][]section{},
+			},
+		},
+		{
+			input: "[user]\nname=root\nshell[unix]=/bin/bash\nshell[win32]=PowerShell.exe\n[user]\nname=admin\nshell[unix]=/bin/bash\nshell[win32]=PowerShell.exe",
+			want: parseTree{
+				global: newSection(""),
+				sections: map[string][]section{
+					"user": []section{
+						{
+							name: "user",
+							props: map[string]property{
+								"name": property{
+									key: "name",
+									vals: map[string][]string{
+										"": []string{"root"},
+									},
+								},
+								"shell": property{
+									key: "shell",
+									vals: map[string][]string{
+										"unix":  []string{"/bin/bash"},
+										"win32": []string{"PowerShell.exe"},
+									},
+								},
 							},
 						},
-					},
-				},
-				"database": []section{
-					section{
-						name: "database",
-						props: map[string]property{
-							"server": property{
-								key: "server",
-								val: []string{"192.0.2.62"},
-							},
-							"port": property{
-								key: "port",
-								val: []string{"143"},
-							},
-							"file": property{
-								key: "file",
-								val: []string{`"payroll.dat"`},
+						{
+							name: "user",
+							props: map[string]property{
+								"name": property{
+									key: "name",
+									vals: map[string][]string{
+										"": []string{"admin"},
+									},
+								},
+								"shell": property{
+									key: "shell",
+									vals: map[string][]string{
+										"unix":  []string{"/bin/bash"},
+										"win32": []string{"PowerShell.exe"},
+									},
+								},
 							},
 						},
 					},
@@ -123,8 +108,8 @@ file="payroll.dat"`,
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !cmp.Equal(p.ast, test.want, cmp.Options{cmp.AllowUnexported(section{}, property{})}) {
-			t.Fatalf("%v != %v", p.ast, test.want)
+		if !cmp.Equal(p.tree, test.want, cmp.Options{cmp.AllowUnexported(section{}, property{}, parseTree{})}) {
+			t.Fatalf("%+v != %+v", p.tree, test.want)
 		}
 	}
 }
@@ -138,8 +123,18 @@ func TestParseProp(t *testing.T) {
 			input: "shell=/bin/bash",
 			want: property{
 				key: "shell",
-				val: []string{
-					"/bin/bash",
+				vals: map[string][]string{
+					"": []string{"/bin/bash"},
+				},
+			},
+		},
+		{
+			input: "Greeting[en]=Hello\nGreeting[fr]=Bonjour",
+			want: property{
+				key: "Greeting",
+				vals: map[string][]string{
+					"en": []string{"Hello"},
+					"fr": []string{"Bonjour"},
 				},
 			},
 		},
@@ -148,13 +143,16 @@ func TestParseProp(t *testing.T) {
 	for _, test := range tests {
 		p := newParser([]byte(test.input))
 		p.nextToken()
-		got := property{
-			key: p.tok.val,
-			val: []string{},
-		}
-		err := p.parseProperty(&got)
-		if err != nil {
-			t.Fatal(err)
+		got := newProperty(p.tok.val)
+		for {
+			err := p.parseProperty(&got)
+			if err != nil {
+				t.Fatal(err)
+			}
+			p.nextToken()
+			if p.tok.typ == tokenEOF {
+				break
+			}
 		}
 		if !cmp.Equal(got, test.want, cmp.Options{cmp.AllowUnexported(property{})}) {
 			t.Errorf("%v != %v", got, test.want)
@@ -174,11 +172,15 @@ func TestParseSection(t *testing.T) {
 				props: map[string]property{
 					"name": property{
 						key: "name",
-						val: []string{"root"},
+						vals: map[string][]string{
+							"": []string{"root"},
+						},
 					},
 					"shell": property{
 						key: "shell",
-						val: []string{"/bin/bash"},
+						vals: map[string][]string{
+							"": []string{"/bin/bash"},
+						},
 					},
 				},
 			},
@@ -188,10 +190,7 @@ func TestParseSection(t *testing.T) {
 	for _, test := range tests {
 		p := newParser([]byte(test.input))
 		p.nextToken()
-		got := section{
-			name:  p.tok.val,
-			props: map[string]property{},
-		}
+		got := newSection(p.tok.val)
 		err := p.parseSection(&got)
 		if err != nil {
 			t.Fatal(err)
