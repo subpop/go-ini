@@ -81,6 +81,10 @@ type token struct {
 	val string
 }
 
+func (t token) String() string {
+	return t.typ.String() + "(" + t.val + ")"
+}
+
 type lexerOptions struct {
 	allowMultilineEscapeNewline    bool // support escaped newlines
 	allowMultilineWhitespacePrefix bool // support space-prefixed lines
