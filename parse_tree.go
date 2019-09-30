@@ -1,55 +1,42 @@
 package ini
 
-import (
-	"fmt"
-)
-
-type missingSectionErr struct {
-	name string
+type invalidKeyErr struct {
+	err string
 }
 
-func (e *missingSectionErr) Error() string {
-	return fmt.Sprintf("parse error: missing section name %q", e.name)
+func (e *invalidKeyErr) Error() string {
+	return "invalid key: " + e.err
 }
 
-type missingPropertyErr struct {
-	key string
+type parseTree struct {
+	global   section
+	sections map[string][]section
 }
-
-func (e *missingPropertyErr) Error() string {
-	return fmt.Sprintf("parse error: missing property key %q", e.key)
-}
-
-type missingSubkeyErr struct {
-	p      property
-	subkey string
-}
-
-func (e *missingSubkeyErr) Error() string {
-	return "property '" + e.p.key + "' missing subkey '" + e.subkey + "'"
-}
-
-type parseTree map[string][]section
 
 func newParseTree() parseTree {
 	return parseTree{
-		"": []section{newSection("")},
+		global:   newSection(""),
+		sections: make(map[string][]section),
 	}
 }
 
-func (p parseTree) add(s section) {
-	sections, ok := p[s.name]
+func (p *parseTree) add(s section) {
+	sections, ok := p.sections[s.name]
 	if !ok {
 		sections = make([]section, 0)
 	}
 	sections = append(sections, s)
-	p[s.name] = sections
+	p.sections[s.name] = sections
 }
 
-func (p parseTree) get(name string) ([]section, error) {
-	sections, ok := p[name]
+func (p *parseTree) get(name string) ([]section, error) {
+	if name == "" {
+		return nil, &invalidKeyErr{"section name cannot be empty"}
+	}
+	sections, ok := p.sections[name]
 	if !ok {
-		return nil, &missingSectionErr{name}
+		sections = make([]section, 0)
+		p.sections[name] = sections
 	}
 	return sections, nil
 }
@@ -66,14 +53,18 @@ func newSection(name string) section {
 	}
 }
 
-func (s section) add(p property) {
+func (s *section) add(p property) {
 	s.props[p.key] = p
 }
 
-func (s section) get(key string) (*property, error) {
+func (s *section) get(key string) (*property, error) {
+	if key == "" {
+		return nil, &invalidKeyErr{"property key cannot be empty"}
+	}
 	prop, ok := s.props[key]
 	if !ok {
-		return nil, &missingPropertyErr{key}
+		prop = newProperty(key)
+		s.props[key] = prop
 	}
 	return &prop, nil
 }
@@ -85,26 +76,25 @@ type property struct {
 
 func newProperty(key string) property {
 	return property{
-		key: key,
-		vals: map[string][]string{
-			"": []string{},
-		},
+		key:  key,
+		vals: make(map[string][]string),
 	}
 }
 
-func (p *property) append(subkey string, values ...string) {
-	v, ok := p.vals[subkey]
+func (p *property) add(key, value string) {
+	vals, ok := p.vals[key]
 	if !ok {
-		v = make([]string, 0)
+		vals = make([]string, 0)
 	}
-	v = append(v, values...)
-	p.vals[subkey] = v
+	vals = append(vals, value)
+	p.vals[key] = vals
 }
 
-func (p property) values(subkey string) ([]string, error) {
-	values, ok := p.vals[subkey]
+func (p *property) get(key string) []string {
+	vals, ok := p.vals[key]
 	if !ok {
-		return nil, &missingSubkeyErr{p, subkey}
+		vals = make([]string, 0)
+		p.vals[key] = vals
 	}
-	return values, nil
+	return vals
 }

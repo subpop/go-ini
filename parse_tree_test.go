@@ -14,12 +14,11 @@ func TestParseTreeAdd(t *testing.T) {
 		{
 			sections: []section{},
 			want: parseTree{
-				"": []section{
-					{
-						name:  "",
-						props: map[string]property{},
-					},
+				global: section{
+					name:  "",
+					props: make(map[string]property),
 				},
+				sections: map[string][]section{},
 			},
 		},
 		{
@@ -48,28 +47,31 @@ func TestParseTreeAdd(t *testing.T) {
 				},
 			},
 			want: parseTree{
-				"": []section{
-					{name: "", props: map[string]property{}},
+				global: section{
+					name:  "",
+					props: map[string]property{},
 				},
-				"user": []section{
-					{
-						name: "user",
-						props: map[string]property{
-							"shell": {
-								key: "shell",
-								vals: map[string][]string{
-									"": []string{"/bin/bash"},
+				sections: map[string][]section{
+					"user": []section{
+						{
+							name: "user",
+							props: map[string]property{
+								"shell": {
+									key: "shell",
+									vals: map[string][]string{
+										"": []string{"/bin/bash"},
+									},
 								},
 							},
 						},
-					},
-					{
-						name: "user",
-						props: map[string]property{
-							"shell": {
-								key: "shell",
-								vals: map[string][]string{
-									"": []string{"/bin/zsh"},
+						{
+							name: "user",
+							props: map[string]property{
+								"shell": {
+									key: "shell",
+									vals: map[string][]string{
+										"": []string{"/bin/zsh"},
+									},
 								},
 							},
 						},
@@ -86,22 +88,25 @@ func TestParseTreeAdd(t *testing.T) {
 			got.add(s)
 		}
 
-		if !cmp.Equal(got, test.want, cmp.Options{cmp.AllowUnexported(property{}, section{})}) {
-			t.Errorf("%v != %v", got, test.want)
+		if !cmp.Equal(got, test.want, cmp.Options{cmp.AllowUnexported(property{}, section{}, parseTree{})}) {
+			t.Errorf("%+v != %+v", got, test.want)
 		}
 	}
 }
 
 func TestParseTreeGet(t *testing.T) {
 	tree := parseTree{
-		"user": []section{
-			section{
-				name: "user",
-				props: map[string]property{
-					"shell": property{
-						key: "shell",
-						vals: map[string][]string{
-							"": []string{"/bin/bash"},
+		global: newSection(""),
+		sections: map[string][]section{
+			"user": []section{
+				section{
+					name: "user",
+					props: map[string]property{
+						"shell": property{
+							key: "shell",
+							vals: map[string][]string{
+								"": []string{"/bin/bash"},
+							},
 						},
 					},
 				},
@@ -131,10 +136,10 @@ func TestParseTreeGet(t *testing.T) {
 			},
 		},
 		{
-			input:       "group",
+			input:       "",
 			want:        []section{},
 			shouldError: true,
-			wantError:   &missingSectionErr{"group"},
+			wantError:   &invalidKeyErr{"section name cannot be empty"},
 		},
 	}
 
@@ -142,7 +147,7 @@ func TestParseTreeGet(t *testing.T) {
 		got, err := tree.get(test.input)
 
 		if test.shouldError {
-			if !cmp.Equal(err, test.wantError, cmp.Options{cmp.AllowUnexported(missingSectionErr{})}) {
+			if !cmp.Equal(err, test.wantError, cmp.Options{cmp.AllowUnexported(invalidKeyErr{})}) {
 				t.Errorf("%v != %v", err, test.wantError)
 			}
 		} else {
@@ -259,10 +264,17 @@ func TestSectionGet(t *testing.T) {
 			},
 		},
 		{
-			input:       "uid",
+			input: "uid",
+			want: &property{
+				key:  "uid",
+				vals: map[string][]string{},
+			},
+		},
+		{
+			input:       "",
 			want:        nil,
 			shouldError: true,
-			wantError:   &missingPropertyErr{"uid"},
+			wantError:   &invalidKeyErr{"property key cannot be empty"},
 		},
 	}
 
@@ -270,7 +282,7 @@ func TestSectionGet(t *testing.T) {
 		got, err := sec.get(test.input)
 
 		if test.shouldError {
-			if !cmp.Equal(err, test.wantError, cmp.Options{cmp.AllowUnexported(missingPropertyErr{})}) {
+			if !cmp.Equal(err, test.wantError, cmp.Options{cmp.AllowUnexported(invalidKeyErr{})}) {
 				t.Errorf("%v != %v", err, test.wantError)
 			}
 		} else {
@@ -284,7 +296,7 @@ func TestSectionGet(t *testing.T) {
 	}
 }
 
-func TestPropertyAppend(t *testing.T) {
+func TestPropertyAdd(t *testing.T) {
 	tests := []struct {
 		key    string
 		values map[string][]string
@@ -311,7 +323,6 @@ func TestPropertyAppend(t *testing.T) {
 			want: property{
 				key: "Greeting",
 				vals: map[string][]string{
-					"":   []string{},
 					"en": []string{"Hello"},
 					"fr": []string{"Bonjour"},
 				},
@@ -323,7 +334,9 @@ func TestPropertyAppend(t *testing.T) {
 		got := newProperty(test.key)
 
 		for k, v := range test.values {
-			got.append(k, v...)
+			for _, vv := range v {
+				got.add(k, vv)
+			}
 		}
 
 		if !cmp.Equal(got, test.want, cmp.Options{cmp.AllowUnexported(property{})}) {
@@ -332,7 +345,7 @@ func TestPropertyAppend(t *testing.T) {
 	}
 }
 
-func TestPropertyValues(t *testing.T) {
+func TestPropertyGet(t *testing.T) {
 	prop := property{
 		key: "shell",
 		vals: map[string][]string{
@@ -342,11 +355,9 @@ func TestPropertyValues(t *testing.T) {
 	}
 
 	tests := []struct {
-		desc        string
-		input       string
-		want        []string
-		shouldError bool
-		wantError   error
+		desc  string
+		input string
+		want  []string
 	}{
 		{
 			desc:  "simple",
@@ -359,31 +370,17 @@ func TestPropertyValues(t *testing.T) {
 			want:  []string{"PowerShell.exe"},
 		},
 		{
-			desc:        "missing subkey",
-			input:       "unix",
-			want:        nil,
-			shouldError: true,
-			wantError: &missingSubkeyErr{
-				p:      prop,
-				subkey: "unix",
-			},
+			desc:  "create",
+			input: "haiku",
+			want:  []string{},
 		},
 	}
 
 	for _, test := range tests {
-		got, err := prop.values(test.input)
+		got := prop.get(test.input)
 
-		if test.shouldError {
-			if !cmp.Equal(err, test.wantError, cmp.Options{cmp.AllowUnexported(missingSubkeyErr{}, property{})}) {
-				t.Errorf("%v != %v", err, test.wantError)
-			}
-		} else {
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !cmp.Equal(got, test.want) {
-				t.Errorf("%v != %v", got, test.want)
-			}
+		if !cmp.Equal(got, test.want) {
+			t.Errorf("%v != %v", got, test.want)
 		}
 	}
 }
