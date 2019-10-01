@@ -2,7 +2,6 @@ package ini
 
 import (
 	"reflect"
-	"regexp"
 	"strconv"
 )
 
@@ -69,7 +68,7 @@ func unmarshal(data []byte, v interface{}, opts Options) error {
 		return err
 	}
 
-	if err := decode(p.ast, reflect.ValueOf(v)); err != nil {
+	if err := decode(p.tree, reflect.ValueOf(v)); err != nil {
 		return err
 	}
 
@@ -78,10 +77,10 @@ func unmarshal(data []byte, v interface{}, opts Options) error {
 
 // decode sets the underlying values of the value to which rv points to the
 // concrete value stored in the corresponding field of ast.
-func decode(ast ast, rv reflect.Value) error {
+func decode(tree parseTree, rv reflect.Value) error {
 	if rv.Type().Kind() != reflect.Ptr {
 		return &UnmarshalTypeError{
-			Value: reflect.ValueOf(ast).String(),
+			Value: reflect.ValueOf(tree).String(),
 			Type:  rv.Type(),
 		}
 	}
@@ -89,20 +88,15 @@ func decode(ast ast, rv reflect.Value) error {
 	rv = reflect.Indirect(rv)
 	if rv.Type().Kind() != reflect.Struct {
 		return &UnmarshalTypeError{
-			Value: reflect.ValueOf(ast).String(),
+			Value: reflect.ValueOf(tree).String(),
 			Type:  rv.Type(),
 		}
 	}
 
 	/* global properties */
-	sectionGroup, err := ast.getSection("")
-	if err != nil {
+	if err := decodeStruct(tree.global, rv.Addr()); err != nil {
 		return err
-	}
-	if len(sectionGroup) >= 0 {
-		if err := decodeStruct(sectionGroup[0], rv.Addr()); err != nil {
-			return err
-		}
+
 	}
 
 	for i := 0; i < rv.NumField(); i++ {
@@ -113,13 +107,10 @@ func decode(ast ast, rv reflect.Value) error {
 		if t.name == "-" {
 			continue
 		}
-		if t.omitempty && len(ast[t.name]) == 0 {
-			continue
-		}
 
 		switch sf.Type.Kind() {
 		case reflect.Struct:
-			sectionGroup, err := ast.getSection(t.name)
+			sectionGroup, err := tree.get(t.name)
 			if err != nil {
 				return err
 			}
@@ -134,19 +125,12 @@ func decode(ast ast, rv reflect.Value) error {
 			if sf.Type.Elem().Kind() != reflect.Struct {
 				continue
 			}
-			var val interface{}
-			var r *regexp.Regexp
-			r, err = t.pattern()
+			val, err := tree.get(t.name)
 			if err != nil {
 				return err
 			}
-			if r != nil {
-				val = ast.getSectionMatch(r)
-			} else {
-				val, err = ast.getSection(t.name)
-				if err != nil {
-					return err
-				}
+			if len(val) == 0 {
+				continue
 			}
 			if err := decodeSlice(val, sv); err != nil {
 				return err
@@ -180,23 +164,22 @@ func decodeStruct(i interface{}, rv reflect.Value) error {
 			continue
 		}
 
-		if t.omitempty && len(s.props[t.name].val) == 0 {
-			continue
-		}
-
 		switch sf.Type.Kind() {
 		case reflect.Slice:
+			// slices of structs inside a struct is *im-parsable*... get it?
 			if sf.Type.Elem().Kind() == reflect.Struct {
+				// TODO: This should probably error instead of silently skipping
 				continue
 			}
-			prop, err := s.getProperty(t.name)
+
+			prop, err := s.get(t.name)
 			if err != nil {
 				return err
 			}
-			if len(prop.val) == 0 {
+			val := prop.get("")
+			if len(val) == 0 {
 				continue
 			}
-			val := prop.val
 			if err := decodeSlice(val, sv); err != nil {
 				return err
 			}
@@ -219,63 +202,68 @@ func decodeStruct(i interface{}, rv reflect.Value) error {
 			if sf.Name == "SectionName" {
 				val = s.name
 			} else {
-				prop, err := s.getProperty(t.name)
+				prop, err := s.get(t.name)
 				if err != nil {
 					return err
 				}
-				if len(prop.val) == 0 {
+				if len(prop.vals) == 0 {
 					continue
 				}
-				val = prop.val[0]
+				vals := prop.get("")
+				val = vals[0]
 			}
 			if err := decodeString(val, sv); err != nil {
 				return err
 			}
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			prop, err := s.getProperty(t.name)
+			prop, err := s.get(t.name)
 			if err != nil {
 				return err
 			}
-			if len(prop.val) == 0 {
+			if len(prop.vals) == 0 {
 				continue
 			}
-			val := prop.val[0]
+			vals := prop.get("")
+			val := vals[0]
 			if err := decodeInt(val, sv); err != nil {
 				return err
 			}
 		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			prop, err := s.getProperty(t.name)
+			prop, err := s.get(t.name)
 			if err != nil {
 				return err
 			}
-			if len(prop.val) == 0 {
+			if len(prop.vals) == 0 {
 				continue
 			}
-			val := prop.val[0]
+			vals := prop.get("")
+			val := vals[0]
 			if err := decodeUint(val, sv); err != nil {
 				return err
 			}
 		case reflect.Float32, reflect.Float64:
-			prop, err := s.getProperty(t.name)
+			prop, err := s.get(t.name)
 			if err != nil {
 				return err
 			}
-			if len(prop.val) == 0 {
+			if len(prop.vals) == 0 {
 				continue
 			}
-			val := prop.val[0]
+			vals := prop.get("")
+			val := vals[0]
 			if err := decodeFloat(val, sv); err != nil {
 				return err
 			}
 		case reflect.Bool:
-			prop, err := s.getProperty(t.name)
+			prop, err := s.get(t.name)
 			if err != nil {
 				return err
 			}
-			if len(prop.val) == 0 {
+			if len(prop.vals) == 0 {
 				continue
 			}
-			val := prop.val[0]
+			vals := prop.get("")
+			val := vals[0]
 			if err := decodeBool(val, sv); err != nil {
 				return err
 			}

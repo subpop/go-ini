@@ -4,9 +4,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/google/go-cmp/cmp/cmpopts"
-
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
 func TestDecodeString(t *testing.T) {
@@ -250,15 +249,21 @@ func TestDecodeStruct(t *testing.T) {
 				props: map[string]property{
 					"shell": property{
 						key: "shell",
-						val: []string{"/bin/bash"},
+						vals: map[string][]string{
+							"": []string{"/bin/bash"},
+						},
 					},
 					"uid": property{
 						key: "uid",
-						val: []string{"1000"},
+						vals: map[string][]string{
+							"": []string{"1000"},
+						},
 					},
 					"group": property{
 						key: "group",
-						val: []string{"wheel", "video"},
+						vals: map[string][]string{
+							"": []string{"wheel", "video"},
+						},
 					},
 				},
 			},
@@ -309,7 +314,9 @@ func TestDecodeSlice(t *testing.T) {
 		{
 			input: property{
 				key: "",
-				val: []string{"/bin/bash", "/bin/zsh"},
+				vals: map[string][]string{
+					"": []string{"/bin/bash", "/bin/zsh"},
+				},
 			},
 			want: []string{"/bin/bash", "/bin/zsh"},
 		},
@@ -318,7 +325,7 @@ func TestDecodeSlice(t *testing.T) {
 	for _, test := range tests {
 		var got []string
 
-		err := decodeSlice(test.input.(property).val, reflect.ValueOf(&got))
+		err := decodeSlice(test.input.(property).vals[""], reflect.ValueOf(&got))
 
 		if test.shouldError {
 			if !reflect.DeepEqual(err, test.wantError) {
@@ -344,7 +351,9 @@ func TestDecodeSlice(t *testing.T) {
 		{
 			input: property{
 				key: "",
-				val: []string{"1000", "1001"},
+				vals: map[string][]string{
+					"": []string{"1000", "1001"},
+				},
 			},
 			want: []int{1000, 1001},
 		},
@@ -353,7 +362,7 @@ func TestDecodeSlice(t *testing.T) {
 	for _, test := range tests {
 		var got []int
 
-		err := decodeSlice(test.input.(property).val, reflect.ValueOf(&got))
+		err := decodeSlice(test.input.(property).vals[""], reflect.ValueOf(&got))
 
 		if test.shouldError {
 			if !reflect.DeepEqual(err, test.wantError) {
@@ -387,11 +396,15 @@ func TestDecodeSlice(t *testing.T) {
 					props: map[string]property{
 						"name": property{
 							key: "name",
-							val: []string{"root"},
+							vals: map[string][]string{
+								"": []string{"root"},
+							},
 						},
 						"shell": property{
 							key: "shell",
-							val: []string{"/bin/bash"},
+							vals: map[string][]string{
+								"": []string{"/bin/bash"},
+							},
 						},
 					},
 				},
@@ -400,11 +413,15 @@ func TestDecodeSlice(t *testing.T) {
 					props: map[string]property{
 						"name": property{
 							key: "name",
-							val: []string{"admin"},
+							vals: map[string][]string{
+								"": []string{"admin"},
+							},
 						},
 						"shell": property{
 							key: "shell",
-							val: []string{"/bin/zsh"},
+							vals: map[string][]string{
+								"": []string{"/bin/zsh"},
+							},
 						},
 					},
 				},
@@ -498,37 +515,45 @@ func TestDecode(t *testing.T) {
 	}
 
 	tests := []struct {
-		input ast
+		input parseTree
 		want  config
 	}{
 		{
-			input: ast{
-				"": []section{
-					section{
-						name: "",
-						props: map[string]property{
-							"source": property{
-								key: "source",
-								val: []string{"passwd", "ldap"},
+			input: parseTree{
+				global: section{
+					name: "",
+					props: map[string]property{
+						"source": property{
+							key: "source",
+							vals: map[string][]string{
+								"": []string{"passwd", "ldap"},
 							},
 						},
 					},
 				},
-				"user": []section{
-					section{
-						name: "user",
-						props: map[string]property{
-							"shell": property{
-								key: "shell",
-								val: []string{"/bin/bash"},
-							},
-							"uid": property{
-								key: "uid",
-								val: []string{"42"},
-							},
-							"group": property{
-								key: "group",
-								val: []string{"wheel", "video"},
+				sections: map[string][]section{
+					"user": []section{
+						section{
+							name: "user",
+							props: map[string]property{
+								"shell": property{
+									key: "shell",
+									vals: map[string][]string{
+										"": []string{"/bin/bash"},
+									},
+								},
+								"uid": property{
+									key: "uid",
+									vals: map[string][]string{
+										"": []string{"42"},
+									},
+								},
+								"group": property{
+									key: "group",
+									vals: map[string][]string{
+										"": []string{"wheel", "video"},
+									},
+								},
 							},
 						},
 					},
@@ -563,10 +588,10 @@ func TestDecode(t *testing.T) {
 
 func TestUnmarshal(t *testing.T) {
 	type user struct {
-		Name   string   `ini:"name"`
-		Shell  string   `ini:"shell"`
-		UID    int      `ini:"uid"`
-		Groups []string `ini:"group"`
+		Name   string            `ini:"name"`
+		Shell  map[string]string `ini:"shell"`
+		UID    int               `ini:"uid"`
+		Groups []string          `ini:"group"`
 	}
 	type config struct {
 		Users   []user   `ini:"user"`
@@ -581,14 +606,16 @@ func TestUnmarshal(t *testing.T) {
 			input: `source=passwd
 [user]
 name=root
-shell=/bin/bash
+shell[unix]=/bin/bash
+shell[win32]=PowerShell.exe
 uid=1000
 group=wheel
 group=video
 
 [user]
 name=admin
-shell=/bin/bash
+shell[unix]=/bin/bash
+shell[win32]=PowerShell.exe
 uid=1001
 group=wheel
 group=video`,
@@ -596,14 +623,20 @@ group=video`,
 				Sources: []string{"passwd"},
 				Users: []user{
 					user{
-						Name:   "root",
-						Shell:  "/bin/bash",
+						Name: "root",
+						Shell: map[string]string{
+							"unix":  "/bin/bash",
+							"win32": "PowerShell.exe",
+						},
 						UID:    1000,
 						Groups: []string{"wheel", "video"},
 					},
 					user{
-						Name:   "admin",
-						Shell:  "/bin/bash",
+						Name: "admin",
+						Shell: map[string]string{
+							"unix":  "/bin/bash",
+							"win32": "PowerShell.exe",
+						},
 						UID:    1001,
 						Groups: []string{"wheel", "video"},
 					},
@@ -628,17 +661,17 @@ group=video`,
 func TestUnmarshalPattern(t *testing.T) {
 	type image struct {
 		SectionName    string
-		Name           string `ini:"name"`
-		OSInfo         string `ini:"osinfo"`
-		Arch           string `ini:"arch"`
-		File           string `ini:"file"`
-		Revision       int    `ini:"revision,omitempty"`
-		Checksum       string `ini:"checksum"`
-		Format         string `ini:"format"`
-		Size           int64  `ini:"size"`
-		CompressedSize int64  `ini:"compressed_size"`
-		Expand         string `ini:"expand"`
-		Notes          string `ini:"notes"`
+		Name           string   `ini:"name"`
+		OSInfo         string   `ini:"osinfo"`
+		Arch           string   `ini:"arch"`
+		File           string   `ini:"file"`
+		Revision       int      `ini:"revision,omitempty"`
+		Checksum       []string `ini:"[checksum[.*]],omitempty"`
+		Format         string   `ini:"format"`
+		Size           int64    `ini:"size"`
+		CompressedSize int64    `ini:"compressed_size"`
+		Expand         string   `ini:"expand"`
+		Notes          string   `ini:"notes"`
 	}
 	type index struct {
 		Images []image `ini:"[centos-.*]"`
@@ -660,14 +693,14 @@ size=6442450944
 compressed_size=199265736
 expand=/dev/sda3
 notes=CentOS 6.6
-	
+
 	This CentOS image contains only unmodified @Core group packages.
-	
+
 	It is thus very minimal.  The kickstart and install script can be
 	found in the libguestfs source tree:
-	
+
 	builder/website/centos.sh
-	
+
 	Note that ‘virt-builder centos-6’ will always install the latest
 	6.x release.
 
@@ -676,18 +709,18 @@ name=CentOS 7.0
 osinfo=centos7.0
 arch=x86_64
 file=centos-7.0.xz
-checksum=cf9ae295f633fbd04e575eeca16f372e933c70c3107c44eb06864760d04354aa94b4f356bfc9a598c138e687304a52e96777e4467e7db1ec0cb5b2d2ec61affc
+checksum[sha512]=cf9ae295f633fbd04e575eeca16f372e933c70c3107c44eb06864760d04354aa94b4f356bfc9a598c138e687304a52e96777e4467e7db1ec0cb5b2d2ec61affc
 format=raw
 size=6442450944
 compressed_size=213203844
 expand=/dev/sda3
 notes=CentOS 7.0
-	
+
 	This CentOS image contains only unmodified @Core group packages.
-	
+
 	It is thus very minimal.  The kickstart and install script can be
 	found in the libguestfs source tree:
-	
+
 	builder/website/centos.sh
 
 [debian-10]
@@ -701,14 +734,14 @@ size=6442450944
 compressed_size=218919120
 expand=/dev/sda1
 notes=Debian 10 (buster)
-	
+
 	This is a minimal Debian install.
-	
+
 	This image is so very minimal that it only includes an ssh server
 	This image does not contain SSH host keys.  To regenerate them use:
-	
+
 		--firstboot-command "dpkg-reconfigure openssh-server"
-	
+
 	This template was generated by a script in the libguestfs source tree:
 		builder/templates/make-template.ml
 	Associated files used to prepare this template can be found in the
@@ -722,7 +755,7 @@ notes=Debian 10 (buster)
 						Arch:           "x86_64",
 						File:           "centos-6.xz",
 						Revision:       6,
-						Checksum:       "fc403ea3555a5608a25ad30ce2514b67288311a7197ddf9fb664475820f26db2bd95a86be9cd6e3f772187b384a02e0965430456dd518d343a80457057bc5441",
+						Checksum:       []string{"fc403ea3555a5608a25ad30ce2514b67288311a7197ddf9fb664475820f26db2bd95a86be9cd6e3f772187b384a02e0965430456dd518d343a80457057bc5441"},
 						Format:         "raw",
 						Size:           6442450944,
 						CompressedSize: 199265736,
@@ -735,7 +768,7 @@ notes=Debian 10 (buster)
 						OSInfo:         "centos7.0",
 						Arch:           "x86_64",
 						File:           "centos-7.0.xz",
-						Checksum:       "cf9ae295f633fbd04e575eeca16f372e933c70c3107c44eb06864760d04354aa94b4f356bfc9a598c138e687304a52e96777e4467e7db1ec0cb5b2d2ec61affc",
+						Checksum:       []string{"cf9ae295f633fbd04e575eeca16f372e933c70c3107c44eb06864760d04354aa94b4f356bfc9a598c138e687304a52e96777e4467e7db1ec0cb5b2d2ec61affc"},
 						Format:         "raw",
 						Size:           6442450944,
 						CompressedSize: 213203844,
