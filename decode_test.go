@@ -442,6 +442,50 @@ func TestDecodeSlice(t *testing.T) {
 	}
 }
 
+func TestDecodeMap(t *testing.T) {
+
+	tests := []struct {
+		input       property
+		want        map[string]string
+		shouldError bool
+		wantError   error
+	}{
+		{
+			input: property{
+				key: "Greeting",
+				vals: map[string][]string{
+					"en": []string{"Hello"},
+					"fr": []string{"Bonjour"},
+				},
+			},
+			want: map[string]string{
+				"en": "Hello",
+				"fr": "Bonjour",
+			},
+		},
+	}
+
+	for _, test := range tests {
+		var got map[string]string
+		rv := reflect.ValueOf(&got)
+
+		err := decodeMap(test.input, rv)
+
+		if test.shouldError {
+			if !reflect.DeepEqual(err, test.wantError) {
+				t.Errorf("%v != %v", err, test.wantError)
+			}
+		} else {
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !cmp.Equal(got, test.want) {
+				t.Errorf("%v != %v", got, test.want)
+			}
+		}
+	}
+}
+
 func TestDecode(t *testing.T) {
 	type user struct {
 		Shell  string   `ini:"shell"`

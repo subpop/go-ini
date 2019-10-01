@@ -200,6 +200,20 @@ func decodeStruct(i interface{}, rv reflect.Value) error {
 			if err := decodeSlice(val, sv); err != nil {
 				return err
 			}
+		case reflect.Map:
+			if sf.Type.Elem().Kind() == reflect.Struct {
+				continue
+			}
+
+			prop, err := s.get(t.name)
+			if err != nil {
+				return err
+			}
+			var val interface{}
+			val = *prop
+			if err := decodeMap(val, sv); err != nil {
+				return err
+			}
 		case reflect.String:
 			var val string
 			if sf.Name == "SectionName" {
@@ -313,6 +327,61 @@ func decodeSlice(v interface{}, rv reflect.Value) error {
 		if err := decoderFunc(val, sv); err != nil {
 			return err
 		}
+	}
+
+	rv.Set(vv)
+
+	return nil
+}
+
+// decodeMap sets the underlying values of the elements of the value to which
+// rv points to the concrete values stored in i.
+func decodeMap(i interface{}, rv reflect.Value) error {
+	if reflect.TypeOf(i) != reflect.TypeOf(property{}) || rv.Type().Kind() != reflect.Ptr {
+		return &UnmarshalTypeError{
+			Value: reflect.ValueOf(i).String(),
+			Type:  rv.Type(),
+		}
+	}
+
+	p := i.(property)
+	rv = rv.Elem()
+
+	var decoderFunc func(interface{}, reflect.Value) error
+
+	switch rv.Type().Elem().Kind() {
+	case reflect.String:
+		decoderFunc = decodeString
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		decoderFunc = decodeInt
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		decoderFunc = decodeUint
+	case reflect.Float32, reflect.Float64:
+		decoderFunc = decodeFloat
+	case reflect.Bool:
+		decoderFunc = decodeBool
+	default:
+		return &UnmarshalTypeError{
+			Value: reflect.ValueOf(i).String(),
+			Type:  rv.Type(),
+		}
+	}
+
+	vv := reflect.MakeMap(rv.Type())
+
+	for k, v := range p.vals {
+		mv := reflect.New(rv.Type().Elem())
+		var val interface{}
+		if rv.Type().Elem().Kind() == reflect.Slice {
+			val = v
+		} else {
+			val = v[0]
+		}
+		if err := decoderFunc(val, mv); err != nil {
+			return err
+		}
+
+		vv.SetMapIndex(reflect.ValueOf(k), mv.Elem())
 	}
 
 	rv.Set(vv)
