@@ -348,13 +348,9 @@ func decodeInt(i interface{}, rv reflect.Value) error {
 
 	n, err := strconv.ParseInt(i.(string), 10, 64)
 	if err != nil {
-		switch err.(*strconv.NumError).Err {
-		case strconv.ErrRange:
-		default:
-			return &UnmarshalTypeError{
-				Value: reflect.ValueOf(i).String(),
-				Type:  rv.Type(),
-			}
+		return &UnmarshalTypeError{
+			Value: reflect.ValueOf(i).String(),
+			Type:  rv.Type(),
 		}
 	}
 
@@ -375,13 +371,9 @@ func decodeUint(i interface{}, rv reflect.Value) error {
 
 	n, err := strconv.ParseUint(i.(string), 10, 64)
 	if err != nil {
-		switch err.(*strconv.NumError).Err {
-		case strconv.ErrRange:
-		default:
-			return &UnmarshalTypeError{
-				Value: reflect.ValueOf(i).String(),
-				Type:  rv.Type(),
-			}
+		return &UnmarshalTypeError{
+			Value: reflect.ValueOf(i).String(),
+			Type:  rv.Type(),
 		}
 	}
 
