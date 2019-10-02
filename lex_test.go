@@ -258,11 +258,11 @@ func TestLexerNextToken(t *testing.T) {
 		},
 		{
 			desc:  "whitespace multiline values",
-			input: "shell=/bin/bash\n /bin/zsh\ngroup=wheel",
+			input: "shell=/bin/bash\n\n /bin/zsh\ngroup=wheel",
 			want: []token{
 				{typ: tokenPropKey, val: "shell"},
 				{typ: tokenAssignment, val: "="},
-				{typ: tokenPropValue, val: "/bin/bash\n /bin/zsh"},
+				{typ: tokenPropValue, val: "/bin/bash\n\n /bin/zsh"},
 				{typ: tokenPropKey, val: "group"},
 				{typ: tokenAssignment, val: "="},
 				{typ: tokenPropValue, val: "wheel"},

@@ -309,7 +309,7 @@ func lexPropValue(l *lexer) stateFunc {
 	}
 	if l.opts.allowMultilineWhitespacePrefix {
 		l.next()
-		if l.peek() == space || l.peek() == tab {
+		if unicode.IsSpace(l.peek()) {
 			return lexPropValue
 		}
 		l.prev()
