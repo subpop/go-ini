@@ -112,6 +112,32 @@ func TestParseTreeGet(t *testing.T) {
 					},
 				},
 			},
+			"root": []section{
+				section{
+					name: "root",
+					props: map[string]property{
+						"username": property{
+							key: "username",
+							vals: map[string][]string{
+								"": []string{"root"},
+							},
+						},
+					},
+				},
+			},
+			"admin": []section{
+				section{
+					name: "admin",
+					props: map[string]property{
+						"username": property{
+							key: "username",
+							vals: map[string][]string{
+								"": []string{"admin"},
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 	tests := []struct {
@@ -142,6 +168,44 @@ func TestParseTreeGet(t *testing.T) {
 			shouldError: true,
 			wantError:   &invalidKeyErr{"section name cannot be empty"},
 		},
+		{
+			input: "*",
+			want: []section{
+				section{
+					name: "user",
+					props: map[string]property{
+						"shell": property{
+							key: "shell",
+							vals: map[string][]string{
+								"": []string{"/bin/bash"},
+							},
+						},
+					},
+				},
+				section{
+					name: "root",
+					props: map[string]property{
+						"username": property{
+							key: "username",
+							vals: map[string][]string{
+								"": []string{"root"},
+							},
+						},
+					},
+				},
+				section{
+					name: "admin",
+					props: map[string]property{
+						"username": property{
+							key: "username",
+							vals: map[string][]string{
+								"": []string{"admin"},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for _, test := range tests {
@@ -156,7 +220,7 @@ func TestParseTreeGet(t *testing.T) {
 				t.Fatal(err)
 			}
 			if !cmp.Equal(got, test.want, cmp.Options{cmp.AllowUnexported(property{}, section{})}) {
-				t.Errorf("%v != %v", got, test.want)
+				t.Errorf("%+v != %+v", got, test.want)
 			}
 		}
 	}

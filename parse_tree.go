@@ -33,6 +33,13 @@ func (p *parseTree) get(name string) ([]section, error) {
 	if name == "" {
 		return nil, &invalidKeyErr{"section name cannot be empty"}
 	}
+	if name == "*" {
+		sections := make([]section, 0)
+		for _, v := range p.sections {
+			sections = append(sections, v...)
+		}
+		return sections, nil
+	}
 	sections, ok := p.sections[name]
 	if !ok {
 		sections = make([]section, 0)
