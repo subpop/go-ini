@@ -4,6 +4,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/google/go-cmp/cmp/cmpopts"
+
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -652,6 +654,53 @@ group=video`,
 		}
 
 		if !cmp.Equal(got, test.want) {
+			t.Errorf("%+v != %+v", got, test.want)
+		}
+	}
+}
+
+func TestUnmarshalWildcard(t *testing.T) {
+	type User struct {
+		ININame string
+		Shell   string `ini:"shell"`
+	}
+	tests := []struct {
+		input string
+		want  struct {
+			Users []User `ini:"*"`
+		}
+	}{
+		{
+			input: "[root]\nshell=/bin/bash\n\n[admin]\nshell=/bin/zsh",
+			want: struct {
+				Users []User `ini:"*"`
+			}{
+				Users: []User{
+					{
+						ININame: "root",
+						Shell:   "/bin/bash",
+					},
+					{
+						ININame: "admin",
+						Shell:   "/bin/zsh",
+					},
+				},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		var got struct {
+			Users []User `ini:"*"`
+		}
+		err := Unmarshal([]byte(test.input), &got)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if !cmp.Equal(got, test.want, cmp.Options{cmpopts.SortSlices(func(a, b User) bool {
+			return a.ININame > b.ININame
+		})}) {
 			t.Errorf("%+v != %+v", got, test.want)
 		}
 	}

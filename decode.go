@@ -41,12 +41,11 @@ func (e *UnmarshalTypeError) Error() string {
 // each value to the slice. If the destination struct field is not a slice type,
 // an error is returned.
 //
-// A struct field tag name may contain a valid regular expression within square
-// brackets (i.e. `ini:"[lib.*]"`). If such a tag is detected and the destination
-// field is a slice, any section name that matches the regular expression is
-// decoded into the destination field as an element in the slice. Under these
-// circumstances, the section name is not decoded. However, if a struct field
-// named "SectionName" is encountered, the section name decoded into that field.
+// A struct field tag name may a single asterisk (colloquially known as the
+// "wildcard" character). If such a tag is detected and the destination
+// field is a slice of structs, all sections are decoded into the destination
+// field as an element in the slice. If a struct field named "ININame" is
+// encountered, the section name decoded into that field.
 //
 // A struct field tag containing "omitempty" will set the destination field to
 // its type's zero value if no corresponding property key was encountered.
@@ -199,7 +198,7 @@ func decodeStruct(i interface{}, rv reflect.Value) error {
 			}
 		case reflect.String:
 			var val string
-			if sf.Name == "SectionName" {
+			if sf.Name == "ININame" {
 				val = s.name
 			} else {
 				prop, err := s.get(t.name)
