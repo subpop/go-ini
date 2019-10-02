@@ -4,6 +4,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/google/go-cmp/cmp/cmpopts"
+
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -219,7 +221,7 @@ func TestParseTreeGet(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if !cmp.Equal(got, test.want, cmp.Options{cmp.AllowUnexported(property{}, section{})}) {
+			if !cmp.Equal(got, test.want, cmp.Options{cmp.AllowUnexported(property{}, section{}), cmpopts.SortSlices(func(a, b section) bool { return a.name > b.name })}) {
 				t.Errorf("%+v != %+v", got, test.want)
 			}
 		}
