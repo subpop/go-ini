@@ -275,7 +275,7 @@ func lexMapKey(l *lexer) stateFunc {
 		if r == mapKeyEnd {
 			break
 		}
-		r = l.next()
+		l.next()
 	}
 	l.emit(tokenMapKey)
 	l.next()
