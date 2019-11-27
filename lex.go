@@ -72,6 +72,7 @@ const (
 	escape       = rune(92) // backslash
 	space        = ' '
 	tab          = '\t'
+	numberSign   = '#'
 )
 
 type stateFunc func(l *lexer) stateFunc
@@ -89,6 +90,7 @@ type lexerOptions struct {
 	allowMultilineEscapeNewline    bool // support escaped newlines
 	allowMultilineWhitespacePrefix bool // support space-prefixed lines
 	allowEmptyValues               bool // accept empty values as valid
+	allowNumberSignComments        bool // treat lines beginning with the number sign (#) as a comment
 }
 
 type lexer struct {
@@ -200,6 +202,11 @@ func lexLineStart(l *lexer) stateFunc {
 		return nil
 	case r == comment:
 		return lexComment
+	case r == numberSign:
+		if l.opts.allowNumberSignComments {
+			return lexComment
+		}
+		return l.error(&unexpectedCharErr{got: r})
 	case r == sectionStart:
 		return lexSection
 	case unicode.IsSpace(r):

@@ -300,6 +300,15 @@ func TestLexerNextToken(t *testing.T) {
 				{typ: tokenEOF, val: ""},
 			},
 		},
+		{
+			desc:  "number sign comments",
+			input: "# this is a comment",
+			want: []token{
+				{typ: tokenComment, val: "# this is a comment"},
+				{typ: tokenEOF, val: ""},
+			},
+			opts: lexerOptions{allowNumberSignComments: true},
+		},
 	}
 
 	for _, test := range tests {
