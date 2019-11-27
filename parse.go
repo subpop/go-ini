@@ -107,6 +107,8 @@ func (p *parser) parseSection(out *section) error {
 			// we've parsed too far; backup so we can parse the next section
 			p.backup()
 			return nil
+		case tokenComment:
+			continue
 		default:
 			return nil
 		}

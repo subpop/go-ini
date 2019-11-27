@@ -189,6 +189,26 @@ func TestParseSection(t *testing.T) {
 				},
 			},
 		},
+		{
+			input: "[user]\n; UNIX user name\nname=root\n; Default shell\nshell=/bin/bash",
+			want: section{
+				name: "user",
+				props: map[string]property{
+					"name": property{
+						key: "name",
+						vals: map[string][]string{
+							"": []string{"root"},
+						},
+					},
+					"shell": property{
+						key: "shell",
+						vals: map[string][]string{
+							"": []string{"/bin/bash"},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for _, test := range tests {
