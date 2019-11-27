@@ -77,6 +77,8 @@ func (p *parser) parse() error {
 				return err
 			}
 			p.tree.global.add(*prop)
+		case tokenComment:
+			continue
 		default:
 			return &unexpectedTokenErr{got: p.tok}
 		}

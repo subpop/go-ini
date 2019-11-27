@@ -100,6 +100,10 @@ func TestParse(t *testing.T) {
 				},
 			},
 		},
+		{
+			input: "; this is a comment",
+			want:  newParseTree(),
+		},
 	}
 
 	for _, test := range tests {
