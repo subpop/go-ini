@@ -208,6 +208,10 @@ func TestParseTreeGet(t *testing.T) {
 				},
 			},
 		},
+		{
+			input: "group",
+			want:  []section{},
+		},
 	}
 
 	for _, test := range tests {
@@ -447,6 +451,26 @@ func TestPropertyGet(t *testing.T) {
 		got := prop.get(test.input)
 
 		if !cmp.Equal(got, test.want) {
+			t.Errorf("%v != %v", got, test.want)
+		}
+	}
+}
+
+func TestInvalidKeyErr(t *testing.T) {
+	tests := []struct {
+		input invalidKeyErr
+		want  string
+	}{
+		{
+			input: invalidKeyErr{"name cannot be empty"},
+			want:  "invalid key: name cannot be empty",
+		},
+	}
+
+	for _, test := range tests {
+		got := test.input.Error()
+
+		if got != test.want {
 			t.Errorf("%v != %v", got, test.want)
 		}
 	}
