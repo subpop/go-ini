@@ -77,6 +77,10 @@ func (e *MarshalerError) Error() string {
 // Slices and arrays are encoded as a sequential list of properties with
 // duplicate keys.
 //
+// Structs are encoded as a string, the value of which is derived from the
+// encoding.TextMarshaler interface. A struct that does not implement this
+// interface causes Marshal to return a MarshalTypeError.
+//
 // Channel, complex, map and function values cannot be encoded in INI.
 // Attempting to encode such a value causes Marshal to return a
 // MarshalTypeError.
@@ -159,7 +163,7 @@ func encodeSection(buf *bytes.Buffer, key string, rv reflect.Value) error {
 		sv := rv.Field(i)
 		t := newTag(sf)
 
-		if t.name == "-" || sf.Type.Kind() == reflect.Struct {
+		if t.name == "-" {
 			continue
 		}
 

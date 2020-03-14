@@ -1,10 +1,19 @@
 package ini
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 )
+
+type point struct {
+	x, y int
+}
+
+func (p point) MarshalText() ([]byte, error) {
+	return []byte(fmt.Sprintf("(%v,%v)", p.x, p.y)), nil
+}
 
 func TestMarshal(t *testing.T) {
 	type database struct {
@@ -13,6 +22,8 @@ func TestMarshal(t *testing.T) {
 		Encrypted bool
 		Size      uint
 		Value     float64
+		Watch     []string
+		Point     point
 	}
 
 	tests := []struct {
@@ -31,9 +42,11 @@ func TestMarshal(t *testing.T) {
 					Encrypted: false,
 					Size:      1234,
 					Value:     12.34,
+					Watch:     []string{"/var/lib/db", "/run/lib/db"},
+					Point:     point{1, 2},
 				},
 			},
-			want: []byte("[Database]\nServer=192.0.2.62\nPort=143\nEncrypted=false\nSize=1234\nValue=12.34"),
+			want: []byte("[Database]\nServer=192.0.2.62\nPort=143\nEncrypted=false\nSize=1234\nValue=12.34\nWatch=/var/lib/db\nWatch=/run/lib/db\nPoint=(1,2)"),
 		},
 	}
 
