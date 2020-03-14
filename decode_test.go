@@ -234,9 +234,12 @@ func TestDecodeFloat(t *testing.T) {
 
 func TestDecodeStruct(t *testing.T) {
 	type user struct {
-		Shell  string   `ini:"shell"`
-		UID    int      `ini:"uid"`
-		Groups []string `ini:"group"`
+		Shell    string   `ini:"shell"`
+		UID      int      `ini:"uid"`
+		Groups   []string `ini:"group"`
+		GID      uint     `ini:"gid"`
+		Admin    bool     `ini:"admin"`
+		AccessID float32  `ini:"access_id"`
 	}
 	tests := []struct {
 		input       section
@@ -266,12 +269,33 @@ func TestDecodeStruct(t *testing.T) {
 							"": []string{"wheel", "video"},
 						},
 					},
+					"gid": property{
+						key: "gid",
+						vals: map[string][]string{
+							"": []string{"1000"},
+						},
+					},
+					"admin": property{
+						key: "admin",
+						vals: map[string][]string{
+							"": []string{"true"},
+						},
+					},
+					"access_id": property{
+						key: "access_id",
+						vals: map[string][]string{
+							"": []string{"1234.5678"},
+						},
+					},
 				},
 			},
 			want: user{
-				Shell:  "/bin/bash",
-				UID:    1000,
-				Groups: []string{"wheel", "video"},
+				Shell:    "/bin/bash",
+				UID:      1000,
+				Groups:   []string{"wheel", "video"},
+				GID:      1000,
+				Admin:    true,
+				AccessID: 1234.5678,
 			},
 		},
 	}
@@ -458,13 +482,88 @@ func TestDecodeSlice(t *testing.T) {
 			}
 		}
 	}
+
+	/*** []bool tests ***/
+	tests = []struct {
+		input       interface{}
+		want        interface{}
+		shouldError bool
+		wantError   error
+	}{
+		{
+			input: property{
+				key: "",
+				vals: map[string][]string{
+					"": []string{"true", "false"},
+				},
+			},
+			want: []bool{true, false},
+		},
+	}
+
+	for _, test := range tests {
+		var got []bool
+
+		err := decodeSlice(test.input.(property).vals[""], reflect.ValueOf(&got))
+
+		if test.shouldError {
+			if !reflect.DeepEqual(err, test.wantError) {
+				t.Errorf("%v != %v", err, test.wantError)
+			}
+		} else {
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !cmp.Equal(got, test.want) {
+				t.Errorf("%v != %v", got, test.want)
+			}
+		}
+	}
+
+	/*** []float64 tests ***/
+	tests = []struct {
+		input       interface{}
+		want        interface{}
+		shouldError bool
+		wantError   error
+	}{
+		{
+			input: property{
+				key: "",
+				vals: map[string][]string{
+					"": []string{"123.456", "654.321"},
+				},
+			},
+			want: []float64{123.456, 654.321},
+		},
+	}
+
+	for _, test := range tests {
+		var got []float64
+
+		err := decodeSlice(test.input.(property).vals[""], reflect.ValueOf(&got))
+
+		if test.shouldError {
+			if !reflect.DeepEqual(err, test.wantError) {
+				t.Errorf("%v != %v", err, test.wantError)
+			}
+		} else {
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !cmp.Equal(got, test.want) {
+				t.Errorf("%v != %v", got, test.want)
+			}
+		}
+	}
 }
 
 func TestDecodeMap(t *testing.T) {
 
+	/* map[string]string tests */
 	tests := []struct {
 		input       property
-		want        map[string]string
+		want        interface{}
 		shouldError bool
 		wantError   error
 	}{
@@ -485,6 +584,174 @@ func TestDecodeMap(t *testing.T) {
 
 	for _, test := range tests {
 		var got map[string]string
+		rv := reflect.ValueOf(&got)
+
+		err := decodeMap(test.input, rv)
+
+		if test.shouldError {
+			if !reflect.DeepEqual(err, test.wantError) {
+				t.Errorf("%v != %v", err, test.wantError)
+			}
+		} else {
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !cmp.Equal(got, test.want) {
+				t.Errorf("%v != %v", got, test.want)
+			}
+		}
+	}
+
+	/* map[string]int tests */
+	tests = []struct {
+		input       property
+		want        interface{}
+		shouldError bool
+		wantError   error
+	}{
+		{
+			input: property{
+				key: "Planets",
+				vals: map[string][]string{
+					"Mercury": []string{"1"},
+					"Venus":   []string{"2"},
+				},
+			},
+			want: map[string]int{
+				"Mercury": 1,
+				"Venus":   2,
+			},
+		},
+	}
+
+	for _, test := range tests {
+		var got map[string]int
+		rv := reflect.ValueOf(&got)
+
+		err := decodeMap(test.input, rv)
+
+		if test.shouldError {
+			if !reflect.DeepEqual(err, test.wantError) {
+				t.Errorf("%v != %v", err, test.wantError)
+			}
+		} else {
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !cmp.Equal(got, test.want) {
+				t.Errorf("%v != %v", got, test.want)
+			}
+		}
+	}
+
+	/* map[string]float64 tests */
+	tests = []struct {
+		input       property
+		want        interface{}
+		shouldError bool
+		wantError   error
+	}{
+		{
+			input: property{
+				key: "Currency",
+				vals: map[string][]string{
+					"USD": []string{"1.0"},
+					"GBP": []string{"1.2"},
+				},
+			},
+			want: map[string]float64{
+				"USD": 1.0,
+				"GBP": 1.2,
+			},
+		},
+	}
+
+	for _, test := range tests {
+		var got map[string]float64
+		rv := reflect.ValueOf(&got)
+
+		err := decodeMap(test.input, rv)
+
+		if test.shouldError {
+			if !reflect.DeepEqual(err, test.wantError) {
+				t.Errorf("%v != %v", err, test.wantError)
+			}
+		} else {
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !cmp.Equal(got, test.want) {
+				t.Errorf("%v != %v", got, test.want)
+			}
+		}
+	}
+
+	/* map[string]bool tests */
+	tests = []struct {
+		input       property
+		want        interface{}
+		shouldError bool
+		wantError   error
+	}{
+		{
+			input: property{
+				key: "Switch",
+				vals: map[string][]string{
+					"On":  []string{"true"},
+					"Off": []string{"false"},
+				},
+			},
+			want: map[string]bool{
+				"On":  true,
+				"Off": false,
+			},
+		},
+	}
+
+	for _, test := range tests {
+		var got map[string]bool
+		rv := reflect.ValueOf(&got)
+
+		err := decodeMap(test.input, rv)
+
+		if test.shouldError {
+			if !reflect.DeepEqual(err, test.wantError) {
+				t.Errorf("%v != %v", err, test.wantError)
+			}
+		} else {
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !cmp.Equal(got, test.want) {
+				t.Errorf("%v != %v", got, test.want)
+			}
+		}
+	}
+
+	/* map[string]uint tests */
+	tests = []struct {
+		input       property
+		want        interface{}
+		shouldError bool
+		wantError   error
+	}{
+		{
+			input: property{
+				key: "Planets",
+				vals: map[string][]string{
+					"Mercury": []string{"1"},
+					"Venus":   []string{"2"},
+				},
+			},
+			want: map[string]uint{
+				"Mercury": 1,
+				"Venus":   2,
+			},
+		},
+	}
+
+	for _, test := range tests {
+		var got map[string]uint
 		rv := reflect.ValueOf(&got)
 
 		err := decodeMap(test.input, rv)
