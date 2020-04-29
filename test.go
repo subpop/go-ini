@@ -79,10 +79,10 @@ var want testDataStruct = testDataStruct{
 		},
 	},
 	SectionSlice1: []testDataSectionSlice{
-		testDataSectionSlice{
+		{
 			PropKeyString: "PropValString",
 		},
-		testDataSectionSlice{
+		{
 			PropKeyString: "PropValString",
 		},
 	},

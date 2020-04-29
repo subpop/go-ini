@@ -251,40 +251,40 @@ func TestDecodeStruct(t *testing.T) {
 			input: section{
 				name: "user",
 				props: map[string]property{
-					"shell": property{
+					"shell": {
 						key: "shell",
 						vals: map[string][]string{
-							"": []string{"/bin/bash"},
+							"": {"/bin/bash"},
 						},
 					},
-					"uid": property{
+					"uid": {
 						key: "uid",
 						vals: map[string][]string{
-							"": []string{"1000"},
+							"": {"1000"},
 						},
 					},
-					"group": property{
+					"group": {
 						key: "group",
 						vals: map[string][]string{
-							"": []string{"wheel", "video"},
+							"": {"wheel", "video"},
 						},
 					},
-					"gid": property{
+					"gid": {
 						key: "gid",
 						vals: map[string][]string{
-							"": []string{"1000"},
+							"": {"1000"},
 						},
 					},
-					"admin": property{
+					"admin": {
 						key: "admin",
 						vals: map[string][]string{
-							"": []string{"true"},
+							"": {"true"},
 						},
 					},
-					"access_id": property{
+					"access_id": {
 						key: "access_id",
 						vals: map[string][]string{
-							"": []string{"1234.5678"},
+							"": {"1234.5678"},
 						},
 					},
 				},
@@ -340,7 +340,7 @@ func TestDecodeSlice(t *testing.T) {
 			input: property{
 				key: "",
 				vals: map[string][]string{
-					"": []string{"/bin/bash", "/bin/zsh"},
+					"": {"/bin/bash", "/bin/zsh"},
 				},
 			},
 			want: []string{"/bin/bash", "/bin/zsh"},
@@ -377,7 +377,7 @@ func TestDecodeSlice(t *testing.T) {
 			input: property{
 				key: "",
 				vals: map[string][]string{
-					"": []string{"1000", "1001"},
+					"": {"1000", "1001"},
 				},
 			},
 			want: []int{1000, 1001},
@@ -419,16 +419,16 @@ func TestDecodeSlice(t *testing.T) {
 				{
 					name: "user",
 					props: map[string]property{
-						"name": property{
+						"name": {
 							key: "name",
 							vals: map[string][]string{
-								"": []string{"root"},
+								"": {"root"},
 							},
 						},
-						"shell": property{
+						"shell": {
 							key: "shell",
 							vals: map[string][]string{
-								"": []string{"/bin/bash"},
+								"": {"/bin/bash"},
 							},
 						},
 					},
@@ -436,27 +436,27 @@ func TestDecodeSlice(t *testing.T) {
 				{
 					name: "user",
 					props: map[string]property{
-						"name": property{
+						"name": {
 							key: "name",
 							vals: map[string][]string{
-								"": []string{"admin"},
+								"": {"admin"},
 							},
 						},
-						"shell": property{
+						"shell": {
 							key: "shell",
 							vals: map[string][]string{
-								"": []string{"/bin/zsh"},
+								"": {"/bin/zsh"},
 							},
 						},
 					},
 				},
 			},
 			want: []user{
-				user{
+				{
 					Name:  "root",
 					Shell: "/bin/bash",
 				},
-				user{
+				{
 					Name:  "admin",
 					Shell: "/bin/zsh",
 				},
@@ -494,7 +494,7 @@ func TestDecodeSlice(t *testing.T) {
 			input: property{
 				key: "",
 				vals: map[string][]string{
-					"": []string{"true", "false"},
+					"": {"true", "false"},
 				},
 			},
 			want: []bool{true, false},
@@ -531,7 +531,7 @@ func TestDecodeSlice(t *testing.T) {
 			input: property{
 				key: "",
 				vals: map[string][]string{
-					"": []string{"123.456", "654.321"},
+					"": {"123.456", "654.321"},
 				},
 			},
 			want: []float64{123.456, 654.321},
@@ -571,8 +571,8 @@ func TestDecodeMap(t *testing.T) {
 			input: property{
 				key: "Greeting",
 				vals: map[string][]string{
-					"en": []string{"Hello"},
-					"fr": []string{"Bonjour"},
+					"en": {"Hello"},
+					"fr": {"Bonjour"},
 				},
 			},
 			want: map[string]string{
@@ -613,8 +613,8 @@ func TestDecodeMap(t *testing.T) {
 			input: property{
 				key: "Planets",
 				vals: map[string][]string{
-					"Mercury": []string{"1"},
-					"Venus":   []string{"2"},
+					"Mercury": {"1"},
+					"Venus":   {"2"},
 				},
 			},
 			want: map[string]int{
@@ -655,8 +655,8 @@ func TestDecodeMap(t *testing.T) {
 			input: property{
 				key: "Currency",
 				vals: map[string][]string{
-					"USD": []string{"1.0"},
-					"GBP": []string{"1.2"},
+					"USD": {"1.0"},
+					"GBP": {"1.2"},
 				},
 			},
 			want: map[string]float64{
@@ -697,8 +697,8 @@ func TestDecodeMap(t *testing.T) {
 			input: property{
 				key: "Switch",
 				vals: map[string][]string{
-					"On":  []string{"true"},
-					"Off": []string{"false"},
+					"On":  {"true"},
+					"Off": {"false"},
 				},
 			},
 			want: map[string]bool{
@@ -739,8 +739,8 @@ func TestDecodeMap(t *testing.T) {
 			input: property{
 				key: "Planets",
 				vals: map[string][]string{
-					"Mercury": []string{"1"},
-					"Venus":   []string{"2"},
+					"Mercury": {"1"},
+					"Venus":   {"2"},
 				},
 			},
 			want: map[string]uint{
@@ -791,35 +791,35 @@ func TestDecode(t *testing.T) {
 				global: section{
 					name: "",
 					props: map[string]property{
-						"source": property{
+						"source": {
 							key: "source",
 							vals: map[string][]string{
-								"": []string{"passwd", "ldap"},
+								"": {"passwd", "ldap"},
 							},
 						},
 					},
 				},
 				sections: map[string][]section{
-					"user": []section{
-						section{
+					"user": {
+						{
 							name: "user",
 							props: map[string]property{
-								"shell": property{
+								"shell": {
 									key: "shell",
 									vals: map[string][]string{
-										"": []string{"/bin/bash"},
+										"": {"/bin/bash"},
 									},
 								},
-								"uid": property{
+								"uid": {
 									key: "uid",
 									vals: map[string][]string{
-										"": []string{"42"},
+										"": {"42"},
 									},
 								},
-								"group": property{
+								"group": {
 									key: "group",
 									vals: map[string][]string{
-										"": []string{"wheel", "video"},
+										"": {"wheel", "video"},
 									},
 								},
 							},
@@ -890,7 +890,7 @@ group=video`,
 			want: config{
 				Sources: []string{"passwd"},
 				Users: []user{
-					user{
+					{
 						Name: "root",
 						Shell: map[string]string{
 							"unix":  "/bin/bash",
@@ -899,7 +899,7 @@ group=video`,
 						UID:    1000,
 						Groups: []string{"wheel", "video"},
 					},
-					user{
+					{
 						Name: "admin",
 						Shell: map[string]string{
 							"unix":  "/bin/bash",

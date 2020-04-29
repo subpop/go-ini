@@ -20,14 +20,14 @@ func TestParse(t *testing.T) {
 			want: parseTree{
 				global: newSection(""),
 				sections: map[string][]section{
-					"user": []section{
+					"user": {
 						{
 							name: "user",
 							props: map[string]property{
-								"shell": property{
+								"shell": {
 									key: "shell",
 									vals: map[string][]string{
-										"": []string{"/bin/bash"},
+										"": {"/bin/bash"},
 									},
 								},
 							},
@@ -42,11 +42,11 @@ func TestParse(t *testing.T) {
 				global: section{
 					name: "",
 					props: map[string]property{
-						"Greeting": property{
+						"Greeting": {
 							key: "Greeting",
 							vals: map[string][]string{
-								"en": []string{"Hello"},
-								"fr": []string{"Bonjour"},
+								"en": {"Hello"},
+								"fr": {"Bonjour"},
 							},
 						},
 					},
@@ -59,21 +59,21 @@ func TestParse(t *testing.T) {
 			want: parseTree{
 				global: newSection(""),
 				sections: map[string][]section{
-					"user": []section{
+					"user": {
 						{
 							name: "user",
 							props: map[string]property{
-								"name": property{
+								"name": {
 									key: "name",
 									vals: map[string][]string{
-										"": []string{"root"},
+										"": {"root"},
 									},
 								},
-								"shell": property{
+								"shell": {
 									key: "shell",
 									vals: map[string][]string{
-										"unix":  []string{"/bin/bash"},
-										"win32": []string{"PowerShell.exe"},
+										"unix":  {"/bin/bash"},
+										"win32": {"PowerShell.exe"},
 									},
 								},
 							},
@@ -81,17 +81,17 @@ func TestParse(t *testing.T) {
 						{
 							name: "user",
 							props: map[string]property{
-								"name": property{
+								"name": {
 									key: "name",
 									vals: map[string][]string{
-										"": []string{"admin"},
+										"": {"admin"},
 									},
 								},
-								"shell": property{
+								"shell": {
 									key: "shell",
 									vals: map[string][]string{
-										"unix":  []string{"/bin/bash"},
-										"win32": []string{"PowerShell.exe"},
+										"unix":  {"/bin/bash"},
+										"win32": {"PowerShell.exe"},
 									},
 								},
 							},
@@ -128,7 +128,7 @@ func TestParseProp(t *testing.T) {
 			want: property{
 				key: "shell",
 				vals: map[string][]string{
-					"": []string{"/bin/bash"},
+					"": {"/bin/bash"},
 				},
 			},
 		},
@@ -137,8 +137,8 @@ func TestParseProp(t *testing.T) {
 			want: property{
 				key: "Greeting",
 				vals: map[string][]string{
-					"en": []string{"Hello"},
-					"fr": []string{"Bonjour"},
+					"en": {"Hello"},
+					"fr": {"Bonjour"},
 				},
 			},
 		},
@@ -174,16 +174,16 @@ func TestParseSection(t *testing.T) {
 			want: section{
 				name: "user",
 				props: map[string]property{
-					"name": property{
+					"name": {
 						key: "name",
 						vals: map[string][]string{
-							"": []string{"root"},
+							"": {"root"},
 						},
 					},
-					"shell": property{
+					"shell": {
 						key: "shell",
 						vals: map[string][]string{
-							"": []string{"/bin/bash"},
+							"": {"/bin/bash"},
 						},
 					},
 				},
@@ -194,16 +194,16 @@ func TestParseSection(t *testing.T) {
 			want: section{
 				name: "user",
 				props: map[string]property{
-					"name": property{
+					"name": {
 						key: "name",
 						vals: map[string][]string{
-							"": []string{"root"},
+							"": {"root"},
 						},
 					},
-					"shell": property{
+					"shell": {
 						key: "shell",
 						vals: map[string][]string{
-							"": []string{"/bin/bash"},
+							"": {"/bin/bash"},
 						},
 					},
 				},

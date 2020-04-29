@@ -32,7 +32,7 @@ func TestParseTreeAdd(t *testing.T) {
 						"shell": {
 							key: "shell",
 							vals: map[string][]string{
-								"": []string{"/bin/bash"},
+								"": {"/bin/bash"},
 							},
 						},
 					},
@@ -43,7 +43,7 @@ func TestParseTreeAdd(t *testing.T) {
 						"shell": {
 							key: "shell",
 							vals: map[string][]string{
-								"": []string{"/bin/zsh"},
+								"": {"/bin/zsh"},
 							},
 						},
 					},
@@ -55,14 +55,14 @@ func TestParseTreeAdd(t *testing.T) {
 					props: map[string]property{},
 				},
 				sections: map[string][]section{
-					"user": []section{
+					"user": {
 						{
 							name: "user",
 							props: map[string]property{
 								"shell": {
 									key: "shell",
 									vals: map[string][]string{
-										"": []string{"/bin/bash"},
+										"": {"/bin/bash"},
 									},
 								},
 							},
@@ -73,7 +73,7 @@ func TestParseTreeAdd(t *testing.T) {
 								"shell": {
 									key: "shell",
 									vals: map[string][]string{
-										"": []string{"/bin/zsh"},
+										"": {"/bin/zsh"},
 									},
 								},
 							},
@@ -101,40 +101,40 @@ func TestParseTreeGet(t *testing.T) {
 	tree := parseTree{
 		global: newSection(""),
 		sections: map[string][]section{
-			"user": []section{
-				section{
+			"user": {
+				{
 					name: "user",
 					props: map[string]property{
-						"shell": property{
+						"shell": {
 							key: "shell",
 							vals: map[string][]string{
-								"": []string{"/bin/bash"},
+								"": {"/bin/bash"},
 							},
 						},
 					},
 				},
 			},
-			"root": []section{
-				section{
+			"root": {
+				{
 					name: "root",
 					props: map[string]property{
-						"username": property{
+						"username": {
 							key: "username",
 							vals: map[string][]string{
-								"": []string{"root"},
+								"": {"root"},
 							},
 						},
 					},
 				},
 			},
-			"admin": []section{
-				section{
+			"admin": {
+				{
 					name: "admin",
 					props: map[string]property{
-						"username": property{
+						"username": {
 							key: "username",
 							vals: map[string][]string{
-								"": []string{"admin"},
+								"": {"admin"},
 							},
 						},
 					},
@@ -154,10 +154,10 @@ func TestParseTreeGet(t *testing.T) {
 				{
 					name: "user",
 					props: map[string]property{
-						"shell": property{
+						"shell": {
 							key: "shell",
 							vals: map[string][]string{
-								"": []string{"/bin/bash"},
+								"": {"/bin/bash"},
 							},
 						},
 					},
@@ -173,35 +173,35 @@ func TestParseTreeGet(t *testing.T) {
 		{
 			input: "*",
 			want: []section{
-				section{
+				{
 					name: "user",
 					props: map[string]property{
-						"shell": property{
+						"shell": {
 							key: "shell",
 							vals: map[string][]string{
-								"": []string{"/bin/bash"},
+								"": {"/bin/bash"},
 							},
 						},
 					},
 				},
-				section{
+				{
 					name: "root",
 					props: map[string]property{
-						"username": property{
+						"username": {
 							key: "username",
 							vals: map[string][]string{
-								"": []string{"root"},
+								"": {"root"},
 							},
 						},
 					},
 				},
-				section{
+				{
 					name: "admin",
 					props: map[string]property{
-						"username": property{
+						"username": {
 							key: "username",
 							vals: map[string][]string{
-								"": []string{"admin"},
+								"": {"admin"},
 							},
 						},
 					},
@@ -244,41 +244,41 @@ func TestSectionAdd(t *testing.T) {
 				{
 					key: "name",
 					vals: map[string][]string{
-						"": []string{"root"},
+						"": {"root"},
 					},
 				},
 				{
 					key: "shell",
 					vals: map[string][]string{
-						"": []string{"/bin/bash"},
+						"": {"/bin/bash"},
 					},
 				},
 				{
 					key: "uid",
 					vals: map[string][]string{
-						"": []string{"1000", "1001"},
+						"": {"1000", "1001"},
 					},
 				},
 			},
 			want: section{
 				name: "user",
 				props: map[string]property{
-					"name": property{
+					"name": {
 						key: "name",
 						vals: map[string][]string{
-							"": []string{"root"},
+							"": {"root"},
 						},
 					},
-					"shell": property{
+					"shell": {
 						key: "shell",
 						vals: map[string][]string{
-							"": []string{"/bin/bash"},
+							"": {"/bin/bash"},
 						},
 					},
-					"uid": property{
+					"uid": {
 						key: "uid",
 						vals: map[string][]string{
-							"": []string{"1000", "1001"},
+							"": {"1000", "1001"},
 						},
 					},
 				},
@@ -303,17 +303,17 @@ func TestSectionGet(t *testing.T) {
 	sec := section{
 		name: "user",
 		props: map[string]property{
-			"shell": property{
+			"shell": {
 				key: "shell",
 				vals: map[string][]string{
-					"":      []string{"/bin/bash"},
-					"win32": []string{"PowerShell.exe"},
+					"":      {"/bin/bash"},
+					"win32": {"PowerShell.exe"},
 				},
 			},
-			"username": property{
+			"username": {
 				key: "username",
 				vals: map[string][]string{
-					"": []string{"root"},
+					"": {"root"},
 				},
 			},
 		},
@@ -329,8 +329,8 @@ func TestSectionGet(t *testing.T) {
 			want: &property{
 				key: "shell",
 				vals: map[string][]string{
-					"":      []string{"/bin/bash"},
-					"win32": []string{"PowerShell.exe"},
+					"":      {"/bin/bash"},
+					"win32": {"PowerShell.exe"},
 				},
 			},
 		},
@@ -376,26 +376,26 @@ func TestPropertyAdd(t *testing.T) {
 		{
 			key: "shell",
 			values: map[string][]string{
-				"": []string{"/bin/bash", "/bin/zsh"},
+				"": {"/bin/bash", "/bin/zsh"},
 			},
 			want: property{
 				key: "shell",
 				vals: map[string][]string{
-					"": []string{"/bin/bash", "/bin/zsh"},
+					"": {"/bin/bash", "/bin/zsh"},
 				},
 			},
 		},
 		{
 			key: "Greeting",
 			values: map[string][]string{
-				"en": []string{"Hello"},
-				"fr": []string{"Bonjour"},
+				"en": {"Hello"},
+				"fr": {"Bonjour"},
 			},
 			want: property{
 				key: "Greeting",
 				vals: map[string][]string{
-					"en": []string{"Hello"},
-					"fr": []string{"Bonjour"},
+					"en": {"Hello"},
+					"fr": {"Bonjour"},
 				},
 			},
 		},
@@ -420,8 +420,8 @@ func TestPropertyGet(t *testing.T) {
 	prop := property{
 		key: "shell",
 		vals: map[string][]string{
-			"":      []string{"/bin/bash"},
-			"win32": []string{"PowerShell.exe"},
+			"":      {"/bin/bash"},
+			"win32": {"PowerShell.exe"},
 		},
 	}
 
