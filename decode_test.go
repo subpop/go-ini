@@ -54,7 +54,7 @@ func TestDecodeString(t *testing.T) {
 
 func TestDecodeInt(t *testing.T) {
 	tests := []struct {
-		input       string
+		input       interface{}
 		want        int64
 		shouldError bool
 		wantError   error
@@ -70,6 +70,14 @@ func TestDecodeInt(t *testing.T) {
 			wantError: &UnmarshalTypeError{
 				val: reflect.ValueOf("forty-two").String(),
 				typ: reflect.PtrTo(reflect.TypeOf(int64(42))),
+			},
+		},
+		{
+			input:       false,
+			shouldError: true,
+			wantError: &UnmarshalTypeError{
+				val: reflect.ValueOf(false).String(),
+				typ: reflect.PtrTo(reflect.TypeOf(int64(1))),
 			},
 		},
 	}
@@ -97,7 +105,7 @@ func TestDecodeInt(t *testing.T) {
 
 func TestDecodeUint(t *testing.T) {
 	tests := []struct {
-		input       string
+		input       interface{}
 		want        uint64
 		shouldError bool
 		wantError   error
@@ -113,6 +121,14 @@ func TestDecodeUint(t *testing.T) {
 			wantError: &UnmarshalTypeError{
 				val: reflect.ValueOf("forty-two").String(),
 				typ: reflect.PtrTo(reflect.TypeOf(uint64(42))),
+			},
+		},
+		{
+			input:       false,
+			shouldError: true,
+			wantError: &UnmarshalTypeError{
+				val: reflect.ValueOf(false).String(),
+				typ: reflect.PtrTo(reflect.TypeOf(uint64(1))),
 			},
 		},
 	}
@@ -140,7 +156,7 @@ func TestDecodeUint(t *testing.T) {
 
 func TestDecodeBool(t *testing.T) {
 	tests := []struct {
-		input       string
+		input       interface{}
 		want        bool
 		shouldError bool
 		wantError   error
@@ -163,6 +179,14 @@ func TestDecodeBool(t *testing.T) {
 			shouldError: true,
 			wantError: &UnmarshalTypeError{
 				val: reflect.ValueOf("forty-two").String(),
+				typ: reflect.PtrTo(reflect.TypeOf(false)),
+			},
+		},
+		{
+			input:       1,
+			shouldError: true,
+			wantError: &UnmarshalTypeError{
+				val: reflect.ValueOf(1).String(),
 				typ: reflect.PtrTo(reflect.TypeOf(false)),
 			},
 		},
@@ -191,7 +215,7 @@ func TestDecodeBool(t *testing.T) {
 
 func TestDecodeFloat(t *testing.T) {
 	tests := []struct {
-		input       string
+		input       interface{}
 		want        float64
 		shouldError bool
 		wantError   error
@@ -207,6 +231,14 @@ func TestDecodeFloat(t *testing.T) {
 			wantError: &UnmarshalTypeError{
 				val: reflect.ValueOf("forty-two").String(),
 				typ: reflect.PtrTo(reflect.TypeOf(float64(42.2))),
+			},
+		},
+		{
+			input:       false,
+			shouldError: true,
+			wantError: &UnmarshalTypeError{
+				val: reflect.ValueOf(false).String(),
+				typ: reflect.PtrTo(reflect.TypeOf(float64(1.0))),
 			},
 		},
 	}
@@ -340,6 +372,15 @@ func TestDecodeSlice(t *testing.T) {
 			input: []string{"/bin/bash", "/bin/zsh"},
 			want:  []string{"/bin/bash", "/bin/zsh"},
 		},
+		{
+			input:       "/bin/bash",
+			want:        []string{},
+			shouldError: true,
+			wantError: &UnmarshalTypeError{
+				val: reflect.ValueOf("/bin/bash").String(),
+				typ: reflect.PtrTo(reflect.TypeOf([]string{})),
+			},
+		},
 	}
 
 	for _, test := range tests {
@@ -372,6 +413,15 @@ func TestDecodeSlice(t *testing.T) {
 			input: []string{"1000", "1001"},
 			want:  []int{1000, 1001},
 		},
+		{
+			input:       "/bin/bash",
+			want:        []int{},
+			shouldError: true,
+			wantError: &UnmarshalTypeError{
+				val: reflect.ValueOf("/bin/bash").String(),
+				typ: reflect.PtrTo(reflect.TypeOf([]int{})),
+			},
+		},
 	}
 
 	for _, test := range tests {
@@ -403,6 +453,15 @@ func TestDecodeSlice(t *testing.T) {
 		{
 			input: []string{"1000", "1001"},
 			want:  []uint{1000, 1001},
+		},
+		{
+			input:       "/bin/bash",
+			want:        []int{},
+			shouldError: true,
+			wantError: &UnmarshalTypeError{
+				val: reflect.ValueOf("/bin/bash").String(),
+				typ: reflect.PtrTo(reflect.TypeOf([]uint{})),
+			},
 		},
 	}
 
@@ -516,6 +575,15 @@ func TestDecodeSlice(t *testing.T) {
 			input: []string{"true", "false"},
 			want:  []bool{true, false},
 		},
+		{
+			input:       "/bin/bash",
+			want:        []bool{},
+			shouldError: true,
+			wantError: &UnmarshalTypeError{
+				val: reflect.ValueOf("/bin/bash").String(),
+				typ: reflect.PtrTo(reflect.TypeOf([]bool{})),
+			},
+		},
 	}
 
 	for _, test := range tests {
@@ -548,6 +616,15 @@ func TestDecodeSlice(t *testing.T) {
 			input: []string{"123.456", "654.321"},
 			want:  []float64{123.456, 654.321},
 		},
+		{
+			input:       "/bin/bash",
+			want:        []float64{},
+			shouldError: true,
+			wantError: &UnmarshalTypeError{
+				val: reflect.ValueOf("/bin/bash").String(),
+				typ: reflect.PtrTo(reflect.TypeOf([]float64{})),
+			},
+		},
 	}
 
 	for _, test := range tests {
@@ -574,7 +651,7 @@ func TestDecodeMap(t *testing.T) {
 
 	/* map[string]string tests */
 	tests := []struct {
-		input       property
+		input       interface{}
 		want        interface{}
 		shouldError bool
 		wantError   error
@@ -590,6 +667,14 @@ func TestDecodeMap(t *testing.T) {
 			want: map[string]string{
 				"en": "Hello",
 				"fr": "Bonjour",
+			},
+		},
+		{
+			input:       "Greeting",
+			shouldError: true,
+			wantError: &UnmarshalTypeError{
+				val: reflect.ValueOf("Greeting").String(),
+				typ: reflect.PtrTo(reflect.TypeOf(map[string]string{})),
 			},
 		},
 	}
@@ -616,7 +701,7 @@ func TestDecodeMap(t *testing.T) {
 
 	/* map[string]int tests */
 	tests = []struct {
-		input       property
+		input       interface{}
 		want        interface{}
 		shouldError bool
 		wantError   error
@@ -632,6 +717,14 @@ func TestDecodeMap(t *testing.T) {
 			want: map[string]int{
 				"Mercury": 1,
 				"Venus":   2,
+			},
+		},
+		{
+			input:       "Planets",
+			shouldError: true,
+			wantError: &UnmarshalTypeError{
+				val: reflect.ValueOf("Planets").String(),
+				typ: reflect.PtrTo(reflect.TypeOf(map[string]int{})),
 			},
 		},
 	}
@@ -658,7 +751,7 @@ func TestDecodeMap(t *testing.T) {
 
 	/* map[string]float64 tests */
 	tests = []struct {
-		input       property
+		input       interface{}
 		want        interface{}
 		shouldError bool
 		wantError   error
@@ -674,6 +767,14 @@ func TestDecodeMap(t *testing.T) {
 			want: map[string]float64{
 				"USD": 1.0,
 				"GBP": 1.2,
+			},
+		},
+		{
+			input:       "Currency",
+			shouldError: true,
+			wantError: &UnmarshalTypeError{
+				val: reflect.ValueOf("Currency").String(),
+				typ: reflect.PtrTo(reflect.TypeOf(map[string]float64{})),
 			},
 		},
 	}
@@ -700,7 +801,7 @@ func TestDecodeMap(t *testing.T) {
 
 	/* map[string]bool tests */
 	tests = []struct {
-		input       property
+		input       interface{}
 		want        interface{}
 		shouldError bool
 		wantError   error
@@ -716,6 +817,14 @@ func TestDecodeMap(t *testing.T) {
 			want: map[string]bool{
 				"On":  true,
 				"Off": false,
+			},
+		},
+		{
+			input:       "Switch",
+			shouldError: true,
+			wantError: &UnmarshalTypeError{
+				val: reflect.ValueOf("Switch").String(),
+				typ: reflect.PtrTo(reflect.TypeOf(map[string]bool{})),
 			},
 		},
 	}
@@ -742,7 +851,7 @@ func TestDecodeMap(t *testing.T) {
 
 	/* map[string]uint tests */
 	tests = []struct {
-		input       property
+		input       interface{}
 		want        interface{}
 		shouldError bool
 		wantError   error
@@ -760,10 +869,109 @@ func TestDecodeMap(t *testing.T) {
 				"Venus":   2,
 			},
 		},
+		{
+			input:       "Planets",
+			shouldError: true,
+			wantError: &UnmarshalTypeError{
+				val: reflect.ValueOf("Planets").String(),
+				typ: reflect.PtrTo(reflect.TypeOf(map[string]uint{})),
+			},
+		},
 	}
 
 	for _, test := range tests {
 		var got map[string]uint
+		rv := reflect.ValueOf(&got)
+
+		err := decodeMap(test.input, rv)
+
+		if test.shouldError {
+			if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(UnmarshalTypeError{})) {
+				t.Errorf("%v != %v", err, test.wantError)
+			}
+		} else {
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !cmp.Equal(got, test.want) {
+				t.Errorf("%v != %v", got, test.want)
+			}
+		}
+	}
+
+	/* map[string]interface{} tests */
+	tests = []struct {
+		input       interface{}
+		want        interface{}
+		shouldError bool
+		wantError   error
+	}{
+		{
+			input: property{
+				key: "Planets",
+				vals: map[string][]string{
+					"Mercury": {"1"},
+					"Venus":   {"2"},
+				},
+			},
+			shouldError: true,
+			wantError: &UnmarshalTypeError{
+				val: reflect.ValueOf(property{}).String(),
+				typ: reflect.PtrTo(reflect.TypeOf(map[string]interface{}{})),
+			},
+		},
+	}
+
+	for _, test := range tests {
+		var got map[string]interface{}
+		rv := reflect.ValueOf(&got)
+
+		err := decodeMap(test.input, rv)
+
+		if test.shouldError {
+			if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(UnmarshalTypeError{})) {
+				t.Errorf("%v != %v", err, test.wantError)
+			}
+		} else {
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !cmp.Equal(got, test.want) {
+				t.Errorf("%v != %v", got, test.want)
+			}
+		}
+	}
+
+	/* map[string][]string tests */
+	tests = []struct {
+		input       interface{}
+		want        interface{}
+		shouldError bool
+		wantError   error
+	}{
+		{
+			input: property{
+				key: "Greeting",
+				vals: map[string][]string{
+					"": {"Hello", "Bonjour"},
+				},
+			},
+			want: map[string][]string{
+				"": {"Hello", "Bonjour"},
+			},
+		},
+		{
+			input:       "Greeting",
+			shouldError: true,
+			wantError: &UnmarshalTypeError{
+				val: reflect.ValueOf("Greeting").String(),
+				typ: reflect.PtrTo(reflect.TypeOf(map[string][]string{})),
+			},
+		},
+	}
+
+	for _, test := range tests {
+		var got map[string][]string
 		rv := reflect.ValueOf(&got)
 
 		err := decodeMap(test.input, rv)
