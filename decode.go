@@ -8,17 +8,17 @@ import (
 // An UnmarshalTypeError describes a value that was not appropriate for a value
 // of a specific Go type.
 type UnmarshalTypeError struct {
-	Value  string       // description of value - "bool", "array", "number -5"
-	Type   reflect.Type // type of Go value it could not be assigned to
-	Struct string       // name of the struct type containing the field
-	Field  string       // name of the field within the struct
+	val string       // description of value - "bool", "array", "number -5"
+	typ reflect.Type // type of Go value it could not be assigned to
+	str string       // name of the struct type containing the field
+	fld string       // name of the field within the struct
 }
 
 func (e *UnmarshalTypeError) Error() string {
-	if e.Struct != "" || e.Field != "" {
-		return "ini: cannot unmarshal " + e.Value + " into Go struct field " + e.Struct + "." + e.Field + " of type " + e.Type.String()
+	if e.str != "" || e.fld != "" {
+		return "ini: cannot unmarshal " + e.val + " into Go struct field " + e.str + "." + e.fld + " of type " + e.typ.String()
 	}
-	return "ini: cannot unmarshal " + e.Value + " into Go value of type " + e.Type.String()
+	return "ini: cannot unmarshal " + e.val + " into Go value of type " + e.typ.String()
 }
 
 // Unmarshal parses the INI-encoded data and stores the result in the value
@@ -80,16 +80,16 @@ func unmarshal(data []byte, v interface{}, opts Options) error {
 func decode(tree parseTree, rv reflect.Value) error {
 	if rv.Type().Kind() != reflect.Ptr {
 		return &UnmarshalTypeError{
-			Value: reflect.ValueOf(tree).String(),
-			Type:  rv.Type(),
+			val: reflect.ValueOf(tree).String(),
+			typ: rv.Type(),
 		}
 	}
 
 	rv = reflect.Indirect(rv)
 	if rv.Type().Kind() != reflect.Struct {
 		return &UnmarshalTypeError{
-			Value: reflect.ValueOf(tree).String(),
-			Type:  rv.Type(),
+			val: reflect.ValueOf(tree).String(),
+			typ: rv.Type(),
 		}
 	}
 
@@ -147,8 +147,8 @@ func decode(tree parseTree, rv reflect.Value) error {
 func decodeStruct(i interface{}, rv reflect.Value) error {
 	if reflect.TypeOf(i) != reflect.TypeOf(section{}) || rv.Type().Kind() != reflect.Ptr {
 		return &UnmarshalTypeError{
-			Value: reflect.ValueOf(i).String(),
-			Type:  rv.Type(),
+			val: reflect.ValueOf(i).String(),
+			typ: rv.Type(),
 		}
 	}
 
@@ -278,8 +278,8 @@ func decodeStruct(i interface{}, rv reflect.Value) error {
 func decodeSlice(v interface{}, rv reflect.Value) error {
 	if reflect.TypeOf(v).Kind() != reflect.Slice || rv.Type().Kind() != reflect.Ptr {
 		return &UnmarshalTypeError{
-			Value: reflect.ValueOf(v).String(),
-			Type:  rv.Type(),
+			val: reflect.ValueOf(v).String(),
+			typ: rv.Type(),
 		}
 	}
 
@@ -302,8 +302,8 @@ func decodeSlice(v interface{}, rv reflect.Value) error {
 		decoderFunc = decodeBool
 	default:
 		return &UnmarshalTypeError{
-			Value: reflect.ValueOf(v).String(),
-			Type:  rv.Type(),
+			val: reflect.ValueOf(v).String(),
+			typ: rv.Type(),
 		}
 	}
 
@@ -327,8 +327,8 @@ func decodeSlice(v interface{}, rv reflect.Value) error {
 func decodeMap(i interface{}, rv reflect.Value) error {
 	if reflect.TypeOf(i) != reflect.TypeOf(property{}) || rv.Type().Kind() != reflect.Ptr {
 		return &UnmarshalTypeError{
-			Value: reflect.ValueOf(i).String(),
-			Type:  rv.Type(),
+			val: reflect.ValueOf(i).String(),
+			typ: rv.Type(),
 		}
 	}
 
@@ -350,8 +350,8 @@ func decodeMap(i interface{}, rv reflect.Value) error {
 		decoderFunc = decodeBool
 	default:
 		return &UnmarshalTypeError{
-			Value: reflect.ValueOf(i).String(),
-			Type:  rv.Type(),
+			val: reflect.ValueOf(i).String(),
+			typ: rv.Type(),
 		}
 	}
 
@@ -383,8 +383,8 @@ func decodeMap(i interface{}, rv reflect.Value) error {
 func decodeString(i interface{}, rv reflect.Value) error {
 	if reflect.TypeOf(i).Kind() != reflect.String || rv.Type().Kind() != reflect.Ptr {
 		return &UnmarshalTypeError{
-			Value: reflect.ValueOf(i).String(),
-			Type:  rv.Type(),
+			val: reflect.ValueOf(i).String(),
+			typ: rv.Type(),
 		}
 	}
 
@@ -398,16 +398,16 @@ func decodeString(i interface{}, rv reflect.Value) error {
 func decodeInt(i interface{}, rv reflect.Value) error {
 	if reflect.TypeOf(i).Kind() != reflect.String || rv.Type().Kind() != reflect.Ptr {
 		return &UnmarshalTypeError{
-			Value: reflect.ValueOf(i).String(),
-			Type:  rv.Type(),
+			val: reflect.ValueOf(i).String(),
+			typ: rv.Type(),
 		}
 	}
 
 	n, err := strconv.ParseInt(i.(string), 10, 64)
 	if err != nil {
 		return &UnmarshalTypeError{
-			Value: reflect.ValueOf(i).String(),
-			Type:  rv.Type(),
+			val: reflect.ValueOf(i).String(),
+			typ: rv.Type(),
 		}
 	}
 
@@ -421,16 +421,16 @@ func decodeInt(i interface{}, rv reflect.Value) error {
 func decodeUint(i interface{}, rv reflect.Value) error {
 	if reflect.TypeOf(i).Kind() != reflect.String || rv.Type().Kind() != reflect.Ptr {
 		return &UnmarshalTypeError{
-			Value: reflect.ValueOf(i).String(),
-			Type:  rv.Type(),
+			val: reflect.ValueOf(i).String(),
+			typ: rv.Type(),
 		}
 	}
 
 	n, err := strconv.ParseUint(i.(string), 10, 64)
 	if err != nil {
 		return &UnmarshalTypeError{
-			Value: reflect.ValueOf(i).String(),
-			Type:  rv.Type(),
+			val: reflect.ValueOf(i).String(),
+			typ: rv.Type(),
 		}
 	}
 
@@ -444,16 +444,16 @@ func decodeUint(i interface{}, rv reflect.Value) error {
 func decodeBool(i interface{}, rv reflect.Value) error {
 	if reflect.TypeOf(i).Kind() != reflect.String || rv.Type().Kind() != reflect.Ptr {
 		return &UnmarshalTypeError{
-			Value: reflect.ValueOf(i).String(),
-			Type:  rv.Type(),
+			val: reflect.ValueOf(i).String(),
+			typ: rv.Type(),
 		}
 	}
 
 	n, err := strconv.ParseBool(i.(string))
 	if err != nil {
 		return &UnmarshalTypeError{
-			Value: reflect.ValueOf(i).String(),
-			Type:  rv.Type(),
+			val: reflect.ValueOf(i).String(),
+			typ: rv.Type(),
 		}
 	}
 
@@ -467,16 +467,16 @@ func decodeBool(i interface{}, rv reflect.Value) error {
 func decodeFloat(i interface{}, rv reflect.Value) error {
 	if reflect.TypeOf(i).Kind() != reflect.String || rv.Type().Kind() != reflect.Ptr {
 		return &UnmarshalTypeError{
-			Value: reflect.ValueOf(i).String(),
-			Type:  rv.Type(),
+			val: reflect.ValueOf(i).String(),
+			typ: rv.Type(),
 		}
 	}
 
 	n, err := strconv.ParseFloat(i.(string), 64)
 	if err != nil {
 		return &UnmarshalTypeError{
-			Value: reflect.ValueOf(i).String(),
-			Type:  rv.Type(),
+			val: reflect.ValueOf(i).String(),
+			typ: rv.Type(),
 		}
 	}
 

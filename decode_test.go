@@ -25,8 +25,8 @@ func TestDecodeString(t *testing.T) {
 			want:        "",
 			shouldError: true,
 			wantError: &UnmarshalTypeError{
-				Value: reflect.ValueOf(42).String(),
-				Type:  reflect.PtrTo(reflect.TypeOf("")),
+				val: reflect.ValueOf(42).String(),
+				typ: reflect.PtrTo(reflect.TypeOf("")),
 			},
 		},
 	}
@@ -68,8 +68,8 @@ func TestDecodeInt(t *testing.T) {
 			want:        int64(42),
 			shouldError: true,
 			wantError: &UnmarshalTypeError{
-				Value: reflect.ValueOf("forty-two").String(),
-				Type:  reflect.PtrTo(reflect.TypeOf(int64(42))),
+				val: reflect.ValueOf("forty-two").String(),
+				typ: reflect.PtrTo(reflect.TypeOf(int64(42))),
 			},
 		},
 	}
@@ -111,8 +111,8 @@ func TestDecodeUint(t *testing.T) {
 			want:        uint64(42),
 			shouldError: true,
 			wantError: &UnmarshalTypeError{
-				Value: reflect.ValueOf("forty-two").String(),
-				Type:  reflect.PtrTo(reflect.TypeOf(uint64(42))),
+				val: reflect.ValueOf("forty-two").String(),
+				typ: reflect.PtrTo(reflect.TypeOf(uint64(42))),
 			},
 		},
 	}
@@ -162,8 +162,8 @@ func TestDecodeBool(t *testing.T) {
 			want:        false,
 			shouldError: true,
 			wantError: &UnmarshalTypeError{
-				Value: reflect.ValueOf("forty-two").String(),
-				Type:  reflect.PtrTo(reflect.TypeOf(false)),
+				val: reflect.ValueOf("forty-two").String(),
+				typ: reflect.PtrTo(reflect.TypeOf(false)),
 			},
 		},
 	}
@@ -205,8 +205,8 @@ func TestDecodeFloat(t *testing.T) {
 			want:        float64(42.2),
 			shouldError: true,
 			wantError: &UnmarshalTypeError{
-				Value: reflect.ValueOf("forty-two").String(),
-				Type:  reflect.PtrTo(reflect.TypeOf(float64(42.2))),
+				val: reflect.ValueOf("forty-two").String(),
+				typ: reflect.PtrTo(reflect.TypeOf(float64(42.2))),
 			},
 		},
 	}
