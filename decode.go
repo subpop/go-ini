@@ -76,7 +76,7 @@ func unmarshal(data []byte, v interface{}, opts Options) error {
 }
 
 // decode sets the underlying values of the value to which rv points to the
-// concrete value stored in the corresponding field of ast.
+// concrete value stored in the corresponding field of tree.
 func decode(tree parseTree, rv reflect.Value) error {
 	if rv.Type().Kind() != reflect.Ptr {
 		return &UnmarshalTypeError{
@@ -274,7 +274,7 @@ func decodeStruct(i interface{}, rv reflect.Value) error {
 }
 
 // decodeSlice sets the underlying values of the elements of the value to which
-// rv points to the concrete values stored in i.
+// rv points to the concrete values stored in v.
 func decodeSlice(v interface{}, rv reflect.Value) error {
 	if reflect.TypeOf(v).Kind() != reflect.Slice || rv.Type().Kind() != reflect.Ptr {
 		return &UnmarshalTypeError{
