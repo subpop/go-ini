@@ -348,6 +348,8 @@ func decodeMap(i interface{}, rv reflect.Value) error {
 		decoderFunc = decodeFloat
 	case reflect.Bool:
 		decoderFunc = decodeBool
+	case reflect.Slice:
+		decoderFunc = decodeSlice
 	default:
 		return &UnmarshalTypeError{
 			val: reflect.ValueOf(i).String(),
