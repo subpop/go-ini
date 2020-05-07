@@ -38,7 +38,7 @@ func TestDecodeString(t *testing.T) {
 		err := decodeString(test.input, rv)
 
 		if test.shouldError {
-			if !reflect.DeepEqual(err, test.wantError) {
+			if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(UnmarshalTypeError{})) {
 				t.Errorf("%v != %v", err, test.wantError)
 			}
 		} else {
@@ -81,7 +81,7 @@ func TestDecodeInt(t *testing.T) {
 		err := decodeInt(test.input, rv)
 
 		if test.shouldError {
-			if !reflect.DeepEqual(err, test.wantError) {
+			if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(UnmarshalTypeError{})) {
 				t.Errorf("%v != %v", err, test.wantError)
 			}
 		} else {
@@ -124,7 +124,7 @@ func TestDecodeUint(t *testing.T) {
 		err := decodeUint(test.input, rv)
 
 		if test.shouldError {
-			if !reflect.DeepEqual(err, test.wantError) {
+			if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(UnmarshalTypeError{})) {
 				t.Errorf("%v != %v", err, test.wantError)
 			}
 		} else {
@@ -175,7 +175,7 @@ func TestDecodeBool(t *testing.T) {
 		err := decodeBool(test.input, rv)
 
 		if test.shouldError {
-			if !reflect.DeepEqual(err, test.wantError) {
+			if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(UnmarshalTypeError{})) {
 				t.Errorf("%v != %v", err, test.wantError)
 			}
 		} else {
@@ -218,7 +218,7 @@ func TestDecodeFloat(t *testing.T) {
 		err := decodeFloat(test.input, rv)
 
 		if test.shouldError {
-			if !reflect.DeepEqual(err, test.wantError) {
+			if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(UnmarshalTypeError{})) {
 				t.Errorf("%v != %v", err, test.wantError)
 			}
 		} else {
@@ -307,7 +307,7 @@ func TestDecodeStruct(t *testing.T) {
 		err := decodeStruct(test.input, rv)
 
 		if test.shouldError {
-			if !reflect.DeepEqual(err, test.wantError) {
+			if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(UnmarshalTypeError{})) {
 				t.Errorf("%v != %v", err, test.wantError)
 			}
 		} else {
@@ -353,7 +353,7 @@ func TestDecodeSlice(t *testing.T) {
 		err := decodeSlice(test.input.(property).vals[""], reflect.ValueOf(&got))
 
 		if test.shouldError {
-			if !reflect.DeepEqual(err, test.wantError) {
+			if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(UnmarshalTypeError{})) {
 				t.Errorf("%v != %v", err, test.wantError)
 			}
 		} else {
@@ -390,7 +390,7 @@ func TestDecodeSlice(t *testing.T) {
 		err := decodeSlice(test.input.(property).vals[""], reflect.ValueOf(&got))
 
 		if test.shouldError {
-			if !reflect.DeepEqual(err, test.wantError) {
+			if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(UnmarshalTypeError{})) {
 				t.Errorf("%v != %v", err, test.wantError)
 			}
 		} else {
@@ -470,7 +470,7 @@ func TestDecodeSlice(t *testing.T) {
 		err := decodeSlice(test.input.([]section), reflect.ValueOf(&got))
 
 		if test.shouldError {
-			if !reflect.DeepEqual(err, test.wantError) {
+			if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(UnmarshalTypeError{})) {
 				t.Errorf("%v != %v", err, test.wantError)
 			}
 		} else {
@@ -507,7 +507,7 @@ func TestDecodeSlice(t *testing.T) {
 		err := decodeSlice(test.input.(property).vals[""], reflect.ValueOf(&got))
 
 		if test.shouldError {
-			if !reflect.DeepEqual(err, test.wantError) {
+			if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(UnmarshalTypeError{})) {
 				t.Errorf("%v != %v", err, test.wantError)
 			}
 		} else {
@@ -544,7 +544,7 @@ func TestDecodeSlice(t *testing.T) {
 		err := decodeSlice(test.input.(property).vals[""], reflect.ValueOf(&got))
 
 		if test.shouldError {
-			if !reflect.DeepEqual(err, test.wantError) {
+			if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(UnmarshalTypeError{})) {
 				t.Errorf("%v != %v", err, test.wantError)
 			}
 		} else {
@@ -589,7 +589,7 @@ func TestDecodeMap(t *testing.T) {
 		err := decodeMap(test.input, rv)
 
 		if test.shouldError {
-			if !reflect.DeepEqual(err, test.wantError) {
+			if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(UnmarshalTypeError{})) {
 				t.Errorf("%v != %v", err, test.wantError)
 			}
 		} else {
@@ -631,7 +631,7 @@ func TestDecodeMap(t *testing.T) {
 		err := decodeMap(test.input, rv)
 
 		if test.shouldError {
-			if !reflect.DeepEqual(err, test.wantError) {
+			if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(UnmarshalTypeError{})) {
 				t.Errorf("%v != %v", err, test.wantError)
 			}
 		} else {
@@ -673,7 +673,7 @@ func TestDecodeMap(t *testing.T) {
 		err := decodeMap(test.input, rv)
 
 		if test.shouldError {
-			if !reflect.DeepEqual(err, test.wantError) {
+			if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(UnmarshalTypeError{})) {
 				t.Errorf("%v != %v", err, test.wantError)
 			}
 		} else {
@@ -715,7 +715,7 @@ func TestDecodeMap(t *testing.T) {
 		err := decodeMap(test.input, rv)
 
 		if test.shouldError {
-			if !reflect.DeepEqual(err, test.wantError) {
+			if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(UnmarshalTypeError{})) {
 				t.Errorf("%v != %v", err, test.wantError)
 			}
 		} else {
@@ -757,7 +757,7 @@ func TestDecodeMap(t *testing.T) {
 		err := decodeMap(test.input, rv)
 
 		if test.shouldError {
-			if !reflect.DeepEqual(err, test.wantError) {
+			if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(UnmarshalTypeError{})) {
 				t.Errorf("%v != %v", err, test.wantError)
 			}
 		} else {
