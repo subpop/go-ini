@@ -645,6 +645,43 @@ func TestDecodeSlice(t *testing.T) {
 			}
 		}
 	}
+
+	/*** [][]string tests ***/
+	tests = []struct {
+		input       interface{}
+		want        interface{}
+		shouldError bool
+		wantError   error
+	}{
+		{
+			input:       []string{"/bin/bash"},
+			want:        [][]string{},
+			shouldError: true,
+			wantError: &UnmarshalTypeError{
+				val: reflect.ValueOf("/bin/bash").String(),
+				typ: reflect.PtrTo(reflect.TypeOf([][]string{})),
+			},
+		},
+	}
+
+	for _, test := range tests {
+		var got [][]string
+
+		err := decodeSlice(test.input, reflect.ValueOf(&got))
+
+		if test.shouldError {
+			if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(UnmarshalTypeError{})) {
+				t.Errorf("%v != %v", err, test.wantError)
+			}
+		} else {
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !cmp.Equal(got, test.want) {
+				t.Errorf("%v != %v", got, test.want)
+			}
+		}
+	}
 }
 
 func TestDecodeMap(t *testing.T) {
