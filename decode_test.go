@@ -393,6 +393,38 @@ func TestDecodeSlice(t *testing.T) {
 		}
 	}
 
+	/*** []uint tests ***/
+	tests = []struct {
+		input       interface{}
+		want        interface{}
+		shouldError bool
+		wantError   error
+	}{
+		{
+			input: []string{"1000", "1001"},
+			want:  []uint{1000, 1001},
+		},
+	}
+
+	for _, test := range tests {
+		var got []uint
+
+		err := decodeSlice(test.input, reflect.ValueOf(&got))
+
+		if test.shouldError {
+			if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(UnmarshalTypeError{})) {
+				t.Errorf("%v != %v", err, test.wantError)
+			}
+		} else {
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !cmp.Equal(got, test.want) {
+				t.Errorf("%v != %v", got, test.want)
+			}
+		}
+	}
+
 	/*** []struct tests ***/
 	type user struct {
 		Name  string `ini:"name"`
