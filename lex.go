@@ -12,7 +12,11 @@ type unexpectedCharErr struct {
 }
 
 func (e *unexpectedCharErr) Error() string {
-	return fmt.Sprintf("unexpected character: %q (expected %q)", e.got, e.want)
+	s := fmt.Sprintf("unexpected character: %q", e.got)
+	if e.want != eof {
+		s = fmt.Sprintf("%s (expected %q)", s, e.want)
+	}
+	return s
 }
 
 type invalidTokenErr struct {

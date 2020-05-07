@@ -309,6 +309,28 @@ func TestLexerNextToken(t *testing.T) {
 			},
 			opts: lexerOptions{allowNumberSignComments: true},
 		},
+		{
+			desc:  "number sign comment causes error",
+			input: "# this is a comment",
+			want: []token{
+				{typ: tokenError, val: "unexpected character: '#'"},
+			},
+		},
+		{
+			desc:  "invalid line start",
+			input: "% this is an invalid line",
+			want: []token{
+				{typ: tokenError, val: "unexpected character: '%'"},
+			},
+		},
+		{
+			desc:  "unclosed map key",
+			input: "shell[win32",
+			want: []token{
+				{typ: tokenPropKey, val: "shell"},
+				{typ: tokenError, val: "unexpected character: '\\x00' (expected ']')"},
+			},
+		},
 	}
 
 	for _, test := range tests {
