@@ -337,20 +337,15 @@ func TestDecodeSlice(t *testing.T) {
 		wantError   error
 	}{
 		{
-			input: property{
-				key: "",
-				vals: map[string][]string{
-					"": {"/bin/bash", "/bin/zsh"},
-				},
-			},
-			want: []string{"/bin/bash", "/bin/zsh"},
+			input: []string{"/bin/bash", "/bin/zsh"},
+			want:  []string{"/bin/bash", "/bin/zsh"},
 		},
 	}
 
 	for _, test := range tests {
 		var got []string
 
-		err := decodeSlice(test.input.(property).vals[""], reflect.ValueOf(&got))
+		err := decodeSlice(test.input, reflect.ValueOf(&got))
 
 		if test.shouldError {
 			if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(UnmarshalTypeError{})) {
@@ -374,20 +369,15 @@ func TestDecodeSlice(t *testing.T) {
 		wantError   error
 	}{
 		{
-			input: property{
-				key: "",
-				vals: map[string][]string{
-					"": {"1000", "1001"},
-				},
-			},
-			want: []int{1000, 1001},
+			input: []string{"1000", "1001"},
+			want:  []int{1000, 1001},
 		},
 	}
 
 	for _, test := range tests {
 		var got []int
 
-		err := decodeSlice(test.input.(property).vals[""], reflect.ValueOf(&got))
+		err := decodeSlice(test.input, reflect.ValueOf(&got))
 
 		if test.shouldError {
 			if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(UnmarshalTypeError{})) {
@@ -491,20 +481,15 @@ func TestDecodeSlice(t *testing.T) {
 		wantError   error
 	}{
 		{
-			input: property{
-				key: "",
-				vals: map[string][]string{
-					"": {"true", "false"},
-				},
-			},
-			want: []bool{true, false},
+			input: []string{"true", "false"},
+			want:  []bool{true, false},
 		},
 	}
 
 	for _, test := range tests {
 		var got []bool
 
-		err := decodeSlice(test.input.(property).vals[""], reflect.ValueOf(&got))
+		err := decodeSlice(test.input, reflect.ValueOf(&got))
 
 		if test.shouldError {
 			if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(UnmarshalTypeError{})) {
@@ -528,20 +513,15 @@ func TestDecodeSlice(t *testing.T) {
 		wantError   error
 	}{
 		{
-			input: property{
-				key: "",
-				vals: map[string][]string{
-					"": {"123.456", "654.321"},
-				},
-			},
-			want: []float64{123.456, 654.321},
+			input: []string{"123.456", "654.321"},
+			want:  []float64{123.456, 654.321},
 		},
 	}
 
 	for _, test := range tests {
 		var got []float64
 
-		err := decodeSlice(test.input.(property).vals[""], reflect.ValueOf(&got))
+		err := decodeSlice(test.input, reflect.ValueOf(&got))
 
 		if test.shouldError {
 			if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(UnmarshalTypeError{})) {
