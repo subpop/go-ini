@@ -6,52 +6,17 @@ import (
 	"unicode/utf8"
 )
 
+// unexpectedCharErr describes an invalid rune given the lexer's current state.
 type unexpectedCharErr struct {
-	want rune
-	got  rune
+	got rune
+	msg string
 }
 
-func (e *unexpectedCharErr) Error() string {
-	s := fmt.Sprintf("unexpected character: %q", e.got)
-	if e.want != eof {
-		s = fmt.Sprintf("%s (expected %q)", s, e.want)
-	}
-	return s
-}
-
-type invalidTokenErr struct {
-	typ tokenType
-	val string
-}
-
-func (e *invalidTokenErr) Error() string {
-	return "invalid token: " + e.typ.String() + "(" + e.val + ")"
+func (e unexpectedCharErr) Error() string {
+	return fmt.Sprintf("unexpected character: %q, %v", e.got, e.msg)
 }
 
 type tokenType int
-
-func (t tokenType) String() string {
-	switch t {
-	case tokenError:
-		return "tokenError"
-	case tokenPropKey:
-		return "tokenPropKey"
-	case tokenMapKey:
-		return "tokenMapKey"
-	case tokenAssignment:
-		return "tokenAssignment"
-	case tokenPropValue:
-		return "tokenPropValue"
-	case tokenSection:
-		return "tokenSection"
-	case tokenComment:
-		return "tokenComment"
-	case tokenEOF:
-		return "tokenEOF"
-	default:
-		panic("lexer: undefined token")
-	}
-}
 
 const (
 	tokenError tokenType = iota
@@ -84,10 +49,6 @@ type stateFunc func(l *lexer) stateFunc
 type token struct {
 	typ tokenType
 	val string
-}
-
-func (t token) String() string {
-	return t.typ.String() + "(" + t.val + ")"
 }
 
 type lexerOptions struct {
@@ -210,7 +171,7 @@ func lexLineStart(l *lexer) stateFunc {
 		if l.opts.allowNumberSignComments {
 			return lexComment
 		}
-		return l.error(&unexpectedCharErr{got: r})
+		return l.error(&unexpectedCharErr{r, "comments cannot begin with '#'; consider enabling Options.AllowNumberSignComments"})
 	case r == sectionStart:
 		return lexSection
 	case unicode.IsSpace(r):
@@ -219,7 +180,7 @@ func lexLineStart(l *lexer) stateFunc {
 	case unicode.IsLetter(r) || unicode.IsDigit(r):
 		return lexPropKey
 	default:
-		return l.error(&unexpectedCharErr{got: r})
+		return l.error(&unexpectedCharErr{r, "lines can only begin with '[', ';', or alphanumeric characters"})
 	}
 }
 
@@ -242,7 +203,7 @@ func lexSection(l *lexer) stateFunc {
 	for {
 		r = l.peek()
 		if r == eol || r == eof {
-			return l.error(&unexpectedCharErr{want: sectionEnd, got: r})
+			return l.error(&unexpectedCharErr{r, "sections must be closed with a ']'"})
 		}
 		if r == sectionEnd {
 			break
@@ -260,7 +221,7 @@ func lexPropKey(l *lexer) stateFunc {
 	for {
 		r = l.peek()
 		if r == eol || r == eof {
-			return l.error(&unexpectedCharErr{want: assignment, got: r})
+			return l.error(&unexpectedCharErr{r, "a property key must be followed by the assignment character ('=')"})
 		}
 		if r == assignment || r == mapKeyStart {
 			break
@@ -281,7 +242,7 @@ func lexMapKey(l *lexer) stateFunc {
 	for {
 		r = l.peek()
 		if r == eol || r == eof {
-			return l.error(&unexpectedCharErr{want: mapKeyEnd, got: r})
+			return l.error(&unexpectedCharErr{r, "subkeys must be closed with a ']'"})
 		}
 		if r == mapKeyEnd {
 			break
@@ -313,10 +274,7 @@ func lexPropValue(l *lexer) stateFunc {
 		l.next()
 	}
 	if !l.opts.allowEmptyValues && len(l.current()) == 0 {
-		l.error(&invalidTokenErr{
-			typ: tokenPropValue,
-			val: l.current(),
-		})
+		l.error(&unexpectedCharErr{r, "an assignment must be followed by one or more alphanumeric characters"})
 	}
 	if l.opts.allowMultilineWhitespacePrefix {
 		l.next()

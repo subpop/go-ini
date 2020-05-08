@@ -195,156 +195,158 @@ func TestCurrent(t *testing.T) {
 
 func TestLexerNextToken(t *testing.T) {
 	tests := []struct {
-		desc  string
-		input string
-		want  []token
-		opts  lexerOptions
+		description string
+		input       string
+		want        []token
+		opts        lexerOptions
 	}{
 		{
-			desc:  "simple case",
-			input: "shell=/bin/bash",
+			description: "simple case",
+			input:       "shell=/bin/bash",
 			want: []token{
-				{typ: tokenPropKey, val: "shell"},
-				{typ: tokenAssignment, val: "="},
-				{typ: tokenPropValue, val: "/bin/bash"},
-				{typ: tokenEOF, val: ""},
+				{tokenPropKey, "shell"},
+				{tokenAssignment, "="},
+				{tokenPropValue, "/bin/bash"},
+				{tokenEOF, ""},
 			},
 		},
 		{
-			desc:  "section",
-			input: "[user]",
+			description: "section",
+			input:       "[user]",
 			want: []token{
-				{typ: tokenSection, val: "user"},
-				{typ: tokenEOF, val: ""},
+				{tokenSection, "user"},
+				{tokenEOF, ""},
 			},
 		},
 		{
-			desc:  "complete case",
-			input: "; user\n[user]\nshell=/bin/bash\ngroup=wheel",
+			description: "complete case",
+			input:       "; user\n[user]\nshell=/bin/bash\ngroup=wheel",
 			want: []token{
-				{typ: tokenComment, val: `; user`},
-				{typ: tokenSection, val: "user"},
-				{typ: tokenPropKey, val: "shell"},
-				{typ: tokenAssignment, val: "="},
-				{typ: tokenPropValue, val: "/bin/bash"},
-				{typ: tokenPropKey, val: "group"},
-				{typ: tokenAssignment, val: "="},
-				{typ: tokenPropValue, val: "wheel"},
-				{typ: tokenEOF, val: ""},
+				{tokenComment, `; user`},
+				{tokenSection, "user"},
+				{tokenPropKey, "shell"},
+				{tokenAssignment, "="},
+				{tokenPropValue, "/bin/bash"},
+				{tokenPropKey, "group"},
+				{tokenAssignment, "="},
+				{tokenPropValue, "wheel"},
+				{tokenEOF, ""},
 			},
 		},
 		{
-			desc:  "malformed section",
-			input: "[user\nshell=/bin/bash",
+			description: "malformed section",
+			input:       "[user\nshell=/bin/bash",
 			want: []token{
-				{typ: tokenError, val: `unexpected character: '\n' (expected ']')`},
+				{tokenError, `unexpected character: '\n', sections must be closed with a ']'`},
 			},
 		},
 		{
-			desc:  "empty value",
-			input: "shell=",
+			description: "empty value",
+			input:       "shell=",
 			want: []token{
-				{typ: tokenPropKey, val: "shell"},
-				{typ: tokenAssignment, val: "="},
-				{typ: tokenError, val: "invalid token: tokenPropValue()"},
+				{tokenPropKey, "shell"},
+				{tokenAssignment, "="},
+				{tokenError, `unexpected character: '\x00', an assignment must be followed by one or more alphanumeric characters`},
 			},
 		},
 		{
-			desc:  "missing assignment",
-			input: "shell",
+			description: "missing assignment",
+			input:       "shell",
 			want: []token{
-				{typ: tokenError, val: `unexpected character: '\x00' (expected '=')`},
+				{tokenError, `unexpected character: '\x00', a property key must be followed by the assignment character ('=')`},
 			},
 		},
 		{
-			desc:  "whitespace multiline values",
-			input: "shell=/bin/bash\n\n /bin/zsh\ngroup=wheel",
+			description: "whitespace multiline values",
+			input:       "shell=/bin/bash\n\n /bin/zsh\ngroup=wheel",
 			want: []token{
-				{typ: tokenPropKey, val: "shell"},
-				{typ: tokenAssignment, val: "="},
-				{typ: tokenPropValue, val: "/bin/bash\n\n /bin/zsh"},
-				{typ: tokenPropKey, val: "group"},
-				{typ: tokenAssignment, val: "="},
-				{typ: tokenPropValue, val: "wheel"},
-				{typ: tokenEOF, val: ""},
+				{tokenPropKey, "shell"},
+				{tokenAssignment, "="},
+				{tokenPropValue, "/bin/bash\n\n /bin/zsh"},
+				{tokenPropKey, "group"},
+				{tokenAssignment, "="},
+				{tokenPropValue, "wheel"},
+				{tokenEOF, ""},
 			},
 			opts: lexerOptions{allowMultilineWhitespacePrefix: true},
 		},
 		{
-			desc:  "escaped newline multiline values",
-			input: "shell=/bin/bash\\\n/bin/zsh",
+			description: "escaped newline multiline values",
+			input:       "shell=/bin/bash\\\n/bin/zsh",
 			want: []token{
-				{typ: tokenPropKey, val: "shell"},
-				{typ: tokenAssignment, val: "="},
-				{typ: tokenPropValue, val: "/bin/bash\\\n/bin/zsh"},
-				{typ: tokenEOF, val: ""},
+				{tokenPropKey, "shell"},
+				{tokenAssignment, "="},
+				{tokenPropValue, "/bin/bash\\\n/bin/zsh"},
+				{tokenEOF, ""},
 			},
 			opts: lexerOptions{allowMultilineEscapeNewline: true},
 		},
 		{
-			desc:  "map keys",
-			input: "shell[win32]=PowerShell.exe\nshell[unix]=/bin/bash\nshell[]=sh",
+			description: "map keys",
+			input:       "shell[win32]=PowerShell.exe\nshell[unix]=/bin/bash\nshell[]=sh",
 			want: []token{
-				{typ: tokenPropKey, val: "shell"},
-				{typ: tokenMapKey, val: "win32"},
-				{typ: tokenAssignment, val: "="},
-				{typ: tokenPropValue, val: "PowerShell.exe"},
-				{typ: tokenPropKey, val: "shell"},
-				{typ: tokenMapKey, val: "unix"},
-				{typ: tokenAssignment, val: "="},
-				{typ: tokenPropValue, val: "/bin/bash"},
-				{typ: tokenPropKey, val: "shell"},
-				{typ: tokenMapKey, val: ""},
-				{typ: tokenAssignment, val: "="},
-				{typ: tokenPropValue, val: "sh"},
-				{typ: tokenEOF, val: ""},
+				{tokenPropKey, "shell"},
+				{tokenMapKey, "win32"},
+				{tokenAssignment, "="},
+				{tokenPropValue, "PowerShell.exe"},
+				{tokenPropKey, "shell"},
+				{tokenMapKey, "unix"},
+				{tokenAssignment, "="},
+				{tokenPropValue, "/bin/bash"},
+				{tokenPropKey, "shell"},
+				{tokenMapKey, ""},
+				{tokenAssignment, "="},
+				{tokenPropValue, "sh"},
+				{tokenEOF, ""},
 			},
 		},
 		{
-			desc:  "number sign comments",
-			input: "# this is a comment",
+			description: "number sign comments",
+			input:       "# this is a comment",
 			want: []token{
-				{typ: tokenComment, val: "# this is a comment"},
-				{typ: tokenEOF, val: ""},
+				{tokenComment, "# this is a comment"},
+				{tokenEOF, ""},
 			},
 			opts: lexerOptions{allowNumberSignComments: true},
 		},
 		{
-			desc:  "number sign comment causes error",
-			input: "# this is a comment",
+			description: "number sign comment causes error",
+			input:       "# this is a comment",
 			want: []token{
-				{typ: tokenError, val: "unexpected character: '#'"},
+				{tokenError, "unexpected character: '#', comments cannot begin with '#'; consider enabling Options.AllowNumberSignComments"},
 			},
 		},
 		{
-			desc:  "invalid line start",
-			input: "% this is an invalid line",
+			description: "invalid line start",
+			input:       "% this is an invalid line",
 			want: []token{
-				{typ: tokenError, val: "unexpected character: '%'"},
+				{tokenError, "unexpected character: '%', lines can only begin with '[', ';', or alphanumeric characters"},
 			},
 		},
 		{
-			desc:  "unclosed map key",
-			input: "shell[win32",
+			description: "unclosed map key",
+			input:       "shell[win32",
 			want: []token{
-				{typ: tokenPropKey, val: "shell"},
-				{typ: tokenError, val: "unexpected character: '\\x00' (expected ']')"},
+				{tokenPropKey, "shell"},
+				{tokenError, "unexpected character: '\\x00', subkeys must be closed with a ']'"},
 			},
 		},
 	}
 
 	for _, test := range tests {
-		l := lex(test.input)
-		l.opts = test.opts
-		for i := 0; ; i++ {
-			got := l.nextToken()
+		t.Run(test.description, func(t *testing.T) {
+			l := lex(test.input)
+			l.opts = test.opts
+			for i := 0; ; i++ {
+				got := l.nextToken()
 
-			if got != test.want[i] {
-				t.Fatalf("%v: %+v != %+v", test.desc, got, test.want[i])
+				if got != test.want[i] {
+					t.Fatalf("nextToken() = %v, want %v", got, test.want[i])
+				}
+				if got.typ == tokenEOF || got.typ == tokenError {
+					break
+				}
 			}
-			if got.typ == tokenEOF || got.typ == tokenError {
-				break
-			}
-		}
+		})
 	}
 }
