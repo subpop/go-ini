@@ -21,6 +21,20 @@ func (e *UnmarshalTypeError) Error() string {
 	return "ini: cannot unmarshal " + e.val + " into Go value of type " + e.typ.String()
 }
 
+// A DecodeError describes an error that was encountered while parsing a value
+// to a specific Go type.
+type DecodeError struct {
+	err error // underlying parse error
+}
+
+func (e DecodeError) Error() string {
+	return e.err.Error()
+}
+
+func (e DecodeError) Unwrap() error {
+	return e.err
+}
+
 // Unmarshal parses the INI-encoded data and stores the result in the value
 // pointed to by v. If v is nil or not a pointer to a struct, Unmarshal returns
 // an UnmarshalTypeError; INI-encoded data must be encoded into a struct.
@@ -41,7 +55,7 @@ func (e *UnmarshalTypeError) Error() string {
 // each value to the slice. If the destination struct field is not a slice type,
 // an error is returned.
 //
-// A struct field tag name may a single asterisk (colloquially known as the
+// A struct field tag name may be a single asterisk (colloquially known as the
 // "wildcard" character). If such a tag is detected and the destination
 // field is a slice of structs, all sections are decoded into the destination
 // field as an element in the slice. If a struct field named "ININame" is
@@ -68,35 +82,19 @@ func unmarshal(data []byte, v interface{}, opts Options) error {
 		return err
 	}
 
-	if err := decode(p.tree, reflect.ValueOf(v)); err != nil {
-		return err
-	}
-
-	return nil
+	return decode(p.tree, reflect.ValueOf(v))
 }
 
-// decode sets the underlying values of the value to which rv points to the
-// concrete value stored in the corresponding field of tree.
+// decode sets the underlying values of the fields of the value to which rv
+// points to the parsed values stored in the corresponding field of tree. It
+// panics if rv is not a reflect.Ptr to a struct.
 func decode(tree parseTree, rv reflect.Value) error {
-	if rv.Type().Kind() != reflect.Ptr {
-		return &UnmarshalTypeError{
-			val: reflect.ValueOf(tree).String(),
-			typ: rv.Type(),
-		}
-	}
+	rv = rv.Elem()
 
-	rv = reflect.Indirect(rv)
-	if rv.Type().Kind() != reflect.Struct {
-		return &UnmarshalTypeError{
-			val: reflect.ValueOf(tree).String(),
-			typ: rv.Type(),
-		}
-	}
-
-	/* global properties */
+	// Decode global properties first. By treating rv as the struct to decode
+	// into, we ignore any struct fields that are structs.
 	if err := decodeStruct(tree.global, rv.Addr()); err != nil {
 		return err
-
 	}
 
 	for i := 0; i < rv.NumField(); i++ {
@@ -108,32 +106,21 @@ func decode(tree parseTree, rv reflect.Value) error {
 			continue
 		}
 
+		sections, err := tree.get(t.name)
+		if err != nil {
+			return err
+		}
+
 		switch sf.Type.Kind() {
 		case reflect.Struct:
-			sectionGroup, err := tree.get(t.name)
-			if err != nil {
-				return err
-			}
-			if len(sectionGroup) == 0 {
-				continue
-			}
-			val := sectionGroup[0]
-			if err := decodeStruct(val, sv); err != nil {
+			if err := decodeStruct(sections[0], sv); err != nil {
 				return err
 			}
 		case reflect.Slice:
-			if sf.Type.Elem().Kind() != reflect.Struct {
-				continue
-			}
-			val, err := tree.get(t.name)
-			if err != nil {
-				return err
-			}
-			if len(val) == 0 {
-				continue
-			}
-			if err := decodeSlice(val, sv); err != nil {
-				return err
+			if sf.Type.Elem().Kind() == reflect.Struct {
+				if err := decodeSliceStruct(sections, sv); err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -142,17 +129,9 @@ func decode(tree parseTree, rv reflect.Value) error {
 }
 
 // decodeStruct sets the underlying values of the fields of the value to which
-// rv points to the concrete values stored in i. If rv is not a reflect.Ptr,
-// decodeStruct returns UnmarshalTypeError.
-func decodeStruct(i interface{}, rv reflect.Value) error {
-	if reflect.TypeOf(i) != reflect.TypeOf(section{}) || rv.Type().Kind() != reflect.Ptr {
-		return &UnmarshalTypeError{
-			val: reflect.ValueOf(i).String(),
-			typ: rv.Type(),
-		}
-	}
-
-	s := i.(section)
+// rv points to the parsed values of s. It panics if rv is not a reflect.Ptr to
+// a struct.
+func decodeStruct(s section, rv reflect.Value) error {
 	rv = rv.Elem()
 
 	for i := 0; i < rv.NumField(); i++ {
@@ -164,155 +143,68 @@ func decodeStruct(i interface{}, rv reflect.Value) error {
 			continue
 		}
 
+		var val interface{}
+
+		prop, err := s.get(t.name)
+		if err != nil {
+			return err
+		}
+		vals := prop.get("")
+
+		var decoderFunc func(string, reflect.Value) error
+
 		switch sf.Type.Kind() {
 		case reflect.Slice:
-			// slices of structs inside a struct is *im-parsable*... get it?
-			if sf.Type.Elem().Kind() == reflect.Struct {
-				// TODO: This should probably error instead of silently skipping
-				continue
-			}
-
-			prop, err := s.get(t.name)
-			if err != nil {
-				return err
-			}
-			val := prop.get("")
-			if len(val) == 0 {
-				continue
-			}
-			if err := decodeSlice(val, sv); err != nil {
-				return err
-			}
-		case reflect.Map:
-			if sf.Type.Elem().Kind() == reflect.Struct {
-				continue
-			}
-
-			prop, err := s.get(t.name)
-			if err != nil {
-				return err
-			}
-			var val interface{}
-			val = *prop
-			if err := decodeMap(val, sv); err != nil {
-				return err
-			}
-		case reflect.String:
-			var val string
-			if sf.Name == "ININame" {
-				val = s.name
-			} else {
-				prop, err := s.get(t.name)
-				if err != nil {
+			if sf.Type.Elem().Kind() != reflect.Struct {
+				if err := decodeSlice(vals, sv); err != nil {
 					return err
 				}
-				if len(prop.vals) == 0 {
-					continue
-				}
-				vals := prop.get("")
-				val = vals[0]
 			}
-			if err := decodeString(val, sv); err != nil {
+			continue
+		case reflect.Map:
+			if err := decodeMap(*prop, sv); err != nil {
 				return err
 			}
+			continue
+		case reflect.String:
+			decoderFunc = decodeString
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			prop, err := s.get(t.name)
-			if err != nil {
-				return err
-			}
-			if len(prop.vals) == 0 {
-				continue
-			}
-			vals := prop.get("")
-			val := vals[0]
-			if err := decodeInt(val, sv); err != nil {
-				return err
-			}
+			decoderFunc = decodeInt
 		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			prop, err := s.get(t.name)
-			if err != nil {
-				return err
-			}
-			if len(prop.vals) == 0 {
-				continue
-			}
-			vals := prop.get("")
-			val := vals[0]
-			if err := decodeUint(val, sv); err != nil {
-				return err
-			}
+			decoderFunc = decodeUint
 		case reflect.Float32, reflect.Float64:
-			prop, err := s.get(t.name)
-			if err != nil {
-				return err
-			}
-			if len(prop.vals) == 0 {
-				continue
-			}
-			vals := prop.get("")
-			val := vals[0]
-			if err := decodeFloat(val, sv); err != nil {
-				return err
-			}
+			decoderFunc = decodeFloat
 		case reflect.Bool:
-			prop, err := s.get(t.name)
-			if err != nil {
-				return err
-			}
-			if len(prop.vals) == 0 {
-				continue
-			}
-			vals := prop.get("")
-			val := vals[0]
-			if err := decodeBool(val, sv); err != nil {
-				return err
-			}
+			decoderFunc = decodeBool
+		}
+
+		if sf.Name == "ININame" {
+			vals = append(vals, s.name)
+		}
+		if len(vals) == 0 {
+			continue
+		}
+		val = vals[0]
+
+		if err := decoderFunc(val.(string), sv); err != nil {
+			return err
 		}
 	}
 
 	return nil
 }
 
-// decodeSlice sets the underlying values of the elements of the value to which
-// rv points to the concrete values stored in v.
-func decodeSlice(v interface{}, rv reflect.Value) error {
-	if reflect.TypeOf(v).Kind() != reflect.Slice || rv.Type().Kind() != reflect.Ptr {
-		return &UnmarshalTypeError{
-			val: reflect.ValueOf(v).String(),
-			typ: rv.Type(),
-		}
-	}
-
+// decodeSliceStruct sets the underlying values of the fields of the elements to
+// which rv points to the parsed values of s. It pancis if rv is not a
+// reflect.Ptr to a slice of structs.
+func decodeSliceStruct(s []section, rv reflect.Value) error {
 	rv = rv.Elem()
 
-	var decoderFunc func(interface{}, reflect.Value) error
-
-	switch rv.Type().Elem().Kind() {
-	case reflect.String:
-		decoderFunc = decodeString
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		decoderFunc = decodeInt
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		decoderFunc = decodeUint
-	case reflect.Struct:
-		decoderFunc = decodeStruct
-	case reflect.Float32, reflect.Float64:
-		decoderFunc = decodeFloat
-	case reflect.Bool:
-		decoderFunc = decodeBool
-	default:
-		return &UnmarshalTypeError{
-			val: reflect.ValueOf(v).String(),
-			typ: rv.Type(),
-		}
-	}
-
-	vv := reflect.MakeSlice(rv.Type(), reflect.ValueOf(v).Len(), reflect.ValueOf(v).Cap())
+	vv := reflect.MakeSlice(rv.Type(), len(s), cap(s))
 
 	for i := 0; i < vv.Len(); i++ {
 		sv := vv.Index(i).Addr()
-		val := reflect.ValueOf(v).Index(i).Interface()
-		if err := decoderFunc(val, sv); err != nil {
+		if err := decodeStruct(s[i], sv); err != nil {
 			return err
 		}
 	}
@@ -322,20 +214,13 @@ func decodeSlice(v interface{}, rv reflect.Value) error {
 	return nil
 }
 
-// decodeMap sets the underlying values of the elements of the value to which
-// rv points to the concrete values stored in i.
-func decodeMap(i interface{}, rv reflect.Value) error {
-	if reflect.TypeOf(i) != reflect.TypeOf(property{}) || rv.Type().Kind() != reflect.Ptr {
-		return &UnmarshalTypeError{
-			val: reflect.ValueOf(i).String(),
-			typ: rv.Type(),
-		}
-	}
-
-	p := i.(property)
+// decodeSlice sets the underlying values of the elements of the value to which
+// rv points to the parsed values of s. It panics if rv is not a reflect.Ptr to
+// a slice.
+func decodeSlice(s []string, rv reflect.Value) error {
 	rv = rv.Elem()
 
-	var decoderFunc func(interface{}, reflect.Value) error
+	var decoderFunc func(string, reflect.Value) error
 
 	switch rv.Type().Elem().Kind() {
 	case reflect.String:
@@ -348,29 +233,71 @@ func decodeMap(i interface{}, rv reflect.Value) error {
 		decoderFunc = decodeFloat
 	case reflect.Bool:
 		decoderFunc = decodeBool
-	case reflect.Slice:
-		decoderFunc = decodeSlice
 	default:
 		return &UnmarshalTypeError{
-			val: reflect.ValueOf(i).String(),
+			val: reflect.ValueOf(s).String(),
 			typ: rv.Type(),
 		}
 	}
+
+	vv := reflect.MakeSlice(rv.Type(), len(s), cap(s))
+
+	for i := 0; i < vv.Len(); i++ {
+		sv := vv.Index(i).Addr()
+		if err := decoderFunc(s[i], sv); err != nil {
+			return err
+		}
+	}
+
+	rv.Set(vv)
+
+	return nil
+}
+
+// decodeMap sets the underlying keys and values of the elements of the value to
+// which rv points to the parsed values of p. It panics if rv is not a
+// reflect.Ptr to a map[string]interface{}.
+func decodeMap(p property, rv reflect.Value) error {
+	rv = rv.Elem()
 
 	vv := reflect.MakeMap(rv.Type())
 
 	for k, v := range p.vals {
 		mv := reflect.New(rv.Type().Elem())
-		var val interface{}
-		if rv.Type().Elem().Kind() == reflect.Slice {
-			val = v
-		} else {
-			val = v[0]
-		}
-		if err := decoderFunc(val, mv); err != nil {
-			return err
+
+		var decoderFunc func(string, reflect.Value) error
+
+		switch rv.Type().Elem().Kind() {
+		case reflect.Slice:
+			if err := decodeSlice(v, mv); err != nil {
+				return err
+			}
+			vv.SetMapIndex(reflect.ValueOf(k), mv.Elem())
+			continue
+		case reflect.String:
+			decoderFunc = decodeString
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			decoderFunc = decodeInt
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			decoderFunc = decodeUint
+		case reflect.Float32, reflect.Float64:
+			decoderFunc = decodeFloat
+		case reflect.Bool:
+			decoderFunc = decodeBool
+		default:
+			return &UnmarshalTypeError{
+				val: reflect.ValueOf(p).String(),
+				typ: rv.Type(),
+			}
 		}
 
+		if len(v) == 0 {
+			continue
+		}
+
+		if err := decoderFunc(v[0], mv); err != nil {
+			return err
+		}
 		vv.SetMapIndex(reflect.ValueOf(k), mv.Elem())
 	}
 
@@ -380,37 +307,18 @@ func decodeMap(i interface{}, rv reflect.Value) error {
 }
 
 // decodeString sets the underlying value of the value to which rv points to
-// the concrete value stored in i. If rv is not a reflect.Ptr, decodeString
-// returns UnmarshalTypeError.
-func decodeString(i interface{}, rv reflect.Value) error {
-	if reflect.TypeOf(i).Kind() != reflect.String || rv.Type().Kind() != reflect.Ptr {
-		return &UnmarshalTypeError{
-			val: reflect.ValueOf(i).String(),
-			typ: rv.Type(),
-		}
-	}
-
-	rv.Elem().SetString(i.(string))
+// the parsed value of s. It panics if rv is not a reflect.Ptr to a string.
+func decodeString(s string, rv reflect.Value) error {
+	rv.Elem().SetString(s)
 	return nil
 }
 
 // decodeInt sets the underlying value of the value to which rv points to the
-// concrete value stored in i. If rv is not a reflect.Ptr, decodeInt returns
-// UnmarshalTypeError.
-func decodeInt(i interface{}, rv reflect.Value) error {
-	if reflect.TypeOf(i).Kind() != reflect.String || rv.Type().Kind() != reflect.Ptr {
-		return &UnmarshalTypeError{
-			val: reflect.ValueOf(i).String(),
-			typ: rv.Type(),
-		}
-	}
-
-	n, err := strconv.ParseInt(i.(string), 10, 64)
+// parsed value of s. It panics if rv is not a reflect.Ptr to a int64.
+func decodeInt(s string, rv reflect.Value) error {
+	n, err := strconv.ParseInt(s, 10, 64)
 	if err != nil {
-		return &UnmarshalTypeError{
-			val: reflect.ValueOf(i).String(),
-			typ: rv.Type(),
-		}
+		return &DecodeError{err}
 	}
 
 	rv.Elem().SetInt(n)
@@ -418,22 +326,11 @@ func decodeInt(i interface{}, rv reflect.Value) error {
 }
 
 // decodeUint sets the underlying value of the value to which rv points to the
-// concrete value stored in i. If rv is not a reflect.Ptr, decodeUint returns
-// UnmarshalTypeError.
-func decodeUint(i interface{}, rv reflect.Value) error {
-	if reflect.TypeOf(i).Kind() != reflect.String || rv.Type().Kind() != reflect.Ptr {
-		return &UnmarshalTypeError{
-			val: reflect.ValueOf(i).String(),
-			typ: rv.Type(),
-		}
-	}
-
-	n, err := strconv.ParseUint(i.(string), 10, 64)
+// parsed value of s. It panics if rv is not a reflect.Ptr to a uint.
+func decodeUint(s string, rv reflect.Value) error {
+	n, err := strconv.ParseUint(s, 10, 64)
 	if err != nil {
-		return &UnmarshalTypeError{
-			val: reflect.ValueOf(i).String(),
-			typ: rv.Type(),
-		}
+		return &DecodeError{err}
 	}
 
 	rv.Elem().SetUint(n)
@@ -441,22 +338,11 @@ func decodeUint(i interface{}, rv reflect.Value) error {
 }
 
 // decodeBool sets the underlying value of the value to which rv points to the
-// concrete value stored in i. If rv is not a reflect.Ptr, decodeBool returns
-// UnmarshalTypeError.
-func decodeBool(i interface{}, rv reflect.Value) error {
-	if reflect.TypeOf(i).Kind() != reflect.String || rv.Type().Kind() != reflect.Ptr {
-		return &UnmarshalTypeError{
-			val: reflect.ValueOf(i).String(),
-			typ: rv.Type(),
-		}
-	}
-
-	n, err := strconv.ParseBool(i.(string))
+// parsed value of s. It panics if rv is not a reflect.Ptr to a bool.
+func decodeBool(s string, rv reflect.Value) error {
+	n, err := strconv.ParseBool(s)
 	if err != nil {
-		return &UnmarshalTypeError{
-			val: reflect.ValueOf(i).String(),
-			typ: rv.Type(),
-		}
+		return &DecodeError{err}
 	}
 
 	rv.Elem().SetBool(n)
@@ -464,22 +350,11 @@ func decodeBool(i interface{}, rv reflect.Value) error {
 }
 
 // decodeFloat sets the underlying value of the value to which rv points to the
-// concrete value stored in i. If rv is not a reflect.Ptr, decodeFloat returns
-// UnmarshalTypeError.
-func decodeFloat(i interface{}, rv reflect.Value) error {
-	if reflect.TypeOf(i).Kind() != reflect.String || rv.Type().Kind() != reflect.Ptr {
-		return &UnmarshalTypeError{
-			val: reflect.ValueOf(i).String(),
-			typ: rv.Type(),
-		}
-	}
-
-	n, err := strconv.ParseFloat(i.(string), 64)
+// parsed value of s. It panics if rv is not a reflect.Ptr to a float64.
+func decodeFloat(s string, rv reflect.Value) error {
+	n, err := strconv.ParseFloat(s, 64)
 	if err != nil {
-		return &UnmarshalTypeError{
-			val: reflect.ValueOf(i).String(),
-			typ: rv.Type(),
-		}
+		return &DecodeError{err}
 	}
 
 	rv.Elem().SetFloat(n)

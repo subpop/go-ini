@@ -1,6 +1,7 @@
 package ini
 
 import (
+	"errors"
 	"reflect"
 	"testing"
 
@@ -11,23 +12,16 @@ import (
 
 func TestDecodeString(t *testing.T) {
 	tests := []struct {
-		input       interface{}
+		description string
+		input       string
 		want        string
 		shouldError bool
 		wantError   error
 	}{
 		{
-			input: "/bin/bash",
-			want:  "/bin/bash",
-		},
-		{
-			input:       42,
-			want:        "",
-			shouldError: true,
-			wantError: &UnmarshalTypeError{
-				val: reflect.ValueOf(42).String(),
-				typ: reflect.PtrTo(reflect.TypeOf("")),
-			},
+			description: "valid",
+			input:       "/bin/bash",
+			want:        "/bin/bash",
 		},
 	}
 
@@ -38,15 +32,15 @@ func TestDecodeString(t *testing.T) {
 		err := decodeString(test.input, rv)
 
 		if test.shouldError {
-			if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(UnmarshalTypeError{})) {
-				t.Errorf("%v != %v", err, test.wantError)
+			if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(DecodeError{})) {
+				t.Fatalf("decodeString(%v) returned %v, want %v", test.input, err, test.wantError)
 			}
 		} else {
 			if err != nil {
-				t.Fatal(err)
+				t.Fatalf("decodeString(%v) returned %v, want %v", test.input, err, test.wantError)
 			}
-			if got != test.want {
-				t.Errorf("%v != %v", got, test.want)
+			if !cmp.Equal(got, test.want) {
+				t.Errorf("decodeString(%v) = %v, want %v", test.input, got, test.want)
 			}
 		}
 	}
@@ -54,31 +48,22 @@ func TestDecodeString(t *testing.T) {
 
 func TestDecodeInt(t *testing.T) {
 	tests := []struct {
-		input       interface{}
+		description string
+		input       string
 		want        int64
 		shouldError bool
 		wantError   error
 	}{
 		{
-			input: "42",
-			want:  int64(42),
-		},
-		{
-			input:       "forty-two",
+			description: "valid",
+			input:       "42",
 			want:        int64(42),
-			shouldError: true,
-			wantError: &UnmarshalTypeError{
-				val: reflect.ValueOf("forty-two").String(),
-				typ: reflect.PtrTo(reflect.TypeOf(int64(42))),
-			},
 		},
 		{
-			input:       false,
+			description: "invalid parse syntax",
+			input:       "forty-two",
 			shouldError: true,
-			wantError: &UnmarshalTypeError{
-				val: reflect.ValueOf(false).String(),
-				typ: reflect.PtrTo(reflect.TypeOf(int64(1))),
-			},
+			wantError:   &DecodeError{errors.New("invalid syntax")},
 		},
 	}
 
@@ -89,15 +74,15 @@ func TestDecodeInt(t *testing.T) {
 		err := decodeInt(test.input, rv)
 
 		if test.shouldError {
-			if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(UnmarshalTypeError{})) {
-				t.Errorf("%v != %v", err, test.wantError)
+			if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(DecodeError{})) {
+				t.Fatalf("decodeInt(%v) returned %v, want %v", test.input, err, test.wantError)
 			}
 		} else {
 			if err != nil {
-				t.Fatal(err)
+				t.Fatalf("decodeInt(%v) returned %v, want %v", test.input, err, test.wantError)
 			}
-			if got != test.want {
-				t.Errorf("%v != %v", got, test.want)
+			if !cmp.Equal(got, test.want) {
+				t.Errorf("decodeInt(%v) = %v, want %v", test.input, got, test.want)
 			}
 		}
 	}
@@ -105,978 +90,562 @@ func TestDecodeInt(t *testing.T) {
 
 func TestDecodeUint(t *testing.T) {
 	tests := []struct {
-		input       interface{}
+		description string
+		input       string
 		want        uint64
 		shouldError bool
 		wantError   error
 	}{
 		{
-			input: "42",
-			want:  uint64(42),
-		},
-		{
-			input:       "forty-two",
+			description: "valid",
+			input:       "42",
 			want:        uint64(42),
-			shouldError: true,
-			wantError: &UnmarshalTypeError{
-				val: reflect.ValueOf("forty-two").String(),
-				typ: reflect.PtrTo(reflect.TypeOf(uint64(42))),
-			},
 		},
 		{
-			input:       false,
+			description: "invalid parse syntax",
+			input:       "forty-two",
 			shouldError: true,
-			wantError: &UnmarshalTypeError{
-				val: reflect.ValueOf(false).String(),
-				typ: reflect.PtrTo(reflect.TypeOf(uint64(1))),
-			},
+			wantError:   &DecodeError{errors.New("invalid syntax")},
 		},
 	}
 
 	for _, test := range tests {
-		var got uint64
-		rv := reflect.ValueOf(&got)
+		t.Run(test.description, func(t *testing.T) {
+			var got uint64
+			rv := reflect.ValueOf(&got)
 
-		err := decodeUint(test.input, rv)
+			err := decodeUint(test.input, rv)
 
-		if test.shouldError {
-			if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(UnmarshalTypeError{})) {
-				t.Errorf("%v != %v", err, test.wantError)
+			if test.shouldError {
+				if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(DecodeError{})) {
+					t.Fatalf("decodeUint(%v) returned %v, want %v", test.input, err, test.wantError)
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("decodeUint(%v) returned %v, want %v", test.input, err, test.wantError)
+				}
+				if !cmp.Equal(got, test.want) {
+					t.Errorf("decodeUint(%v) = %v, want %v", test.input, got, test.want)
+				}
 			}
-		} else {
-			if err != nil {
-				t.Fatal(err)
-			}
-			if got != test.want {
-				t.Errorf("%v != %v", got, test.want)
-			}
-		}
+		})
 	}
 }
 
 func TestDecodeBool(t *testing.T) {
 	tests := []struct {
-		input       interface{}
+		description string
+		input       string
 		want        bool
 		shouldError bool
 		wantError   error
 	}{
 		{
-			input: "true",
-			want:  true,
+			description: "valid (true)",
+			input:       "true",
+			want:        true,
 		},
 		{
-			input: "0",
-			want:  false,
-		},
-		{
-			input: "T",
-			want:  true,
-		},
-		{
-			input:       "forty-two",
+			description: "valid (0)",
+			input:       "0",
 			want:        false,
-			shouldError: true,
-			wantError: &UnmarshalTypeError{
-				val: reflect.ValueOf("forty-two").String(),
-				typ: reflect.PtrTo(reflect.TypeOf(false)),
-			},
 		},
 		{
-			input:       1,
+			description: "valid (T)",
+			input:       "T",
+			want:        true,
+		},
+		{
+			description: "invalid parse syntax",
+			input:       "forty-two",
 			shouldError: true,
-			wantError: &UnmarshalTypeError{
-				val: reflect.ValueOf(1).String(),
-				typ: reflect.PtrTo(reflect.TypeOf(false)),
-			},
+			wantError:   &DecodeError{errors.New("invalid syntax")},
 		},
 	}
 
 	for _, test := range tests {
-		var got bool
-		rv := reflect.ValueOf(&got)
+		t.Run(test.description, func(t *testing.T) {
+			var got bool
+			rv := reflect.ValueOf(&got)
 
-		err := decodeBool(test.input, rv)
+			err := decodeBool(test.input, rv)
 
-		if test.shouldError {
-			if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(UnmarshalTypeError{})) {
-				t.Errorf("%v != %v", err, test.wantError)
+			if test.shouldError {
+				if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(DecodeError{})) {
+					t.Fatalf("decodeBool(%v) returned %v, want %v", test.input, err, test.wantError)
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("decodeBool(%v) returned %v, want %v", test.input, err, test.wantError)
+				}
+				if !cmp.Equal(got, test.want) {
+					t.Errorf("decodeBool(%v) = %v, want %v", test.input, got, test.want)
+				}
 			}
-		} else {
-			if err != nil {
-				t.Fatal(err)
-			}
-			if got != test.want {
-				t.Errorf("%v != %v", got, test.want)
-			}
-		}
+		})
 	}
 }
 
 func TestDecodeFloat(t *testing.T) {
 	tests := []struct {
-		input       interface{}
+		description string
+		input       string
 		want        float64
 		shouldError bool
 		wantError   error
 	}{
 		{
-			input: "42.2",
-			want:  float64(42.2),
-		},
-		{
-			input:       "forty-two",
+			description: "valid",
+			input:       "42.2",
 			want:        float64(42.2),
-			shouldError: true,
-			wantError: &UnmarshalTypeError{
-				val: reflect.ValueOf("forty-two").String(),
-				typ: reflect.PtrTo(reflect.TypeOf(float64(42.2))),
-			},
 		},
 		{
-			input:       false,
+			description: "invalid parse syntax",
+			input:       "forty-two",
+			want:        float64(0),
 			shouldError: true,
-			wantError: &UnmarshalTypeError{
-				val: reflect.ValueOf(false).String(),
-				typ: reflect.PtrTo(reflect.TypeOf(float64(1.0))),
-			},
+			wantError:   &DecodeError{errors.New("invalid syntax")},
 		},
 	}
 
 	for _, test := range tests {
-		var got float64
-		rv := reflect.ValueOf(&got)
+		t.Run(test.description, func(t *testing.T) {
+			var got float64
+			rv := reflect.ValueOf(&got)
 
-		err := decodeFloat(test.input, rv)
+			err := decodeFloat(test.input, rv)
 
-		if test.shouldError {
-			if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(UnmarshalTypeError{})) {
-				t.Errorf("%v != %v", err, test.wantError)
+			if test.shouldError {
+				if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(DecodeError{})) {
+					t.Fatalf("decodeFloat(%v) returned %v, want %v", test.input, err, test.wantError)
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("decodeFloat(%v) returned %v, want %v", test.input, err, test.wantError)
+				}
+				if !cmp.Equal(got, test.want) {
+					t.Errorf("decodeFloat(%v) = %v, want %v", test.input, got, test.want)
+				}
 			}
-		} else {
-			if err != nil {
-				t.Fatal(err)
-			}
-			if got != test.want {
-				t.Errorf("%v != %v", got, test.want)
-			}
-		}
+		})
 	}
 }
 
 func TestDecodeStruct(t *testing.T) {
-	type user struct {
-		Shell    string   `ini:"shell"`
-		UID      int      `ini:"uid"`
-		Groups   []string `ini:"group"`
-		GID      uint     `ini:"gid"`
-		Admin    bool     `ini:"admin"`
-		AccessID float32  `ini:"access_id"`
-	}
 	tests := []struct {
+		description string
 		input       section
-		want        user
+		want        interface{}
 		shouldError bool
 		wantError   error
+		init        func() interface{}
 	}{
 		{
-			input: section{
-				name: "user",
-				props: map[string]property{
-					"shell": {
-						key: "shell",
-						vals: map[string][]string{
-							"": {"/bin/bash"},
-						},
-					},
-					"uid": {
-						key: "uid",
-						vals: map[string][]string{
-							"": {"1000"},
-						},
-					},
-					"group": {
-						key: "group",
-						vals: map[string][]string{
-							"": {"wheel", "video"},
-						},
-					},
-					"gid": {
-						key: "gid",
-						vals: map[string][]string{
-							"": {"1000"},
-						},
-					},
-					"admin": {
-						key: "admin",
-						vals: map[string][]string{
-							"": {"true"},
-						},
-					},
-					"access_id": {
-						key: "access_id",
-						vals: map[string][]string{
-							"": {"1234.5678"},
-						},
-					},
-				},
+			description: "decodeString",
+			input:       section{"section", map[string]property{"property": {"property", map[string][]string{"": {"value"}}}}},
+			want: &struct {
+				Property string `ini:"property"`
+			}{"value"},
+			init: func() interface{} {
+				return &struct {
+					Property string `ini:"property"`
+				}{}
 			},
-			want: user{
-				Shell:    "/bin/bash",
-				UID:      1000,
-				Groups:   []string{"wheel", "video"},
-				GID:      1000,
-				Admin:    true,
-				AccessID: 1234.5678,
+		},
+		{
+			description: "decodeInt",
+			input:       section{"section", map[string]property{"property": {"property", map[string][]string{"": {"0"}}}}},
+			want: &struct {
+				Property int `ini:"property"`
+			}{0},
+			init: func() interface{} {
+				return &struct {
+					Property int `ini:"property"`
+				}{}
+			},
+		},
+		{
+			description: "decodeUint",
+			input:       section{"section", map[string]property{"property": {"property", map[string][]string{"": {"0"}}}}},
+			want: &struct {
+				Property uint `ini:"property"`
+			}{0},
+			init: func() interface{} {
+				return &struct {
+					Property uint `ini:"property"`
+				}{}
+			},
+		},
+		{
+			description: "decodeFloat",
+			input:       section{"section", map[string]property{"property": {"property", map[string][]string{"": {"0.0"}}}}},
+			want: &struct {
+				Property float64 `ini:"property"`
+			}{0.0},
+			init: func() interface{} {
+				return &struct {
+					Property float64 `ini:"property"`
+				}{}
+			},
+		},
+		{
+			description: "decodeBool",
+			input:       section{"section", map[string]property{"property": {"property", map[string][]string{"": {"1"}}}}},
+			want: &struct {
+				Property bool `ini:"property"`
+			}{true},
+			init: func() interface{} {
+				return &struct {
+					Property bool `ini:"property"`
+				}{}
+			},
+		},
+		{
+			description: "skip property",
+			input:       section{"section", map[string]property{"property": {"property", map[string][]string{"": {"0"}}}}},
+			want: &struct {
+				Property int `ini:"-"`
+			}{0},
+			init: func() interface{} {
+				return &struct {
+					Property int `ini:"-"`
+				}{}
 			},
 		},
 	}
 
 	for _, test := range tests {
-		var got user
-		rv := reflect.ValueOf(&got)
+		t.Run(test.description, func(t *testing.T) {
+			got := test.init()
 
-		err := decodeStruct(test.input, rv)
+			err := decodeStruct(test.input, reflect.ValueOf(got))
+			if test.shouldError {
+				if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(DecodeError{}, UnmarshalTypeError{})) {
+					t.Fatalf("decodeStruct(%v) returned %v, want %v", test.input, err, test.wantError)
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("decodeStruct(%v) returned %v, want %v", test.input, err, test.wantError)
+				}
 
-		if test.shouldError {
-			if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(UnmarshalTypeError{})) {
-				t.Errorf("%v != %v", err, test.wantError)
+				if !cmp.Equal(got, test.want) {
+					t.Errorf("decodeStruct(%v) = %v, want %v", test.input, got, test.want)
+				}
 			}
-		} else {
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !cmp.Equal(got, test.want) {
-				t.Errorf("%v != %v", got, test.want)
-			}
-		}
+		})
 	}
 }
 
-func TestDecodeSlice(t *testing.T) {
-	var tests []struct {
-		input       interface{}
+func TestDecodeSliceStruct(t *testing.T) {
+	tests := []struct {
+		description string
+		input       []section
 		want        interface{}
 		shouldError bool
 		wantError   error
-	}
-
-	/*** []string tests ***/
-	tests = []struct {
-		input       interface{}
-		want        interface{}
-		shouldError bool
-		wantError   error
-	}{
-		{
-			input: []string{"/bin/bash", "/bin/zsh"},
-			want:  []string{"/bin/bash", "/bin/zsh"},
-		},
-		{
-			input:       "/bin/bash",
-			want:        []string{},
-			shouldError: true,
-			wantError: &UnmarshalTypeError{
-				val: reflect.ValueOf("/bin/bash").String(),
-				typ: reflect.PtrTo(reflect.TypeOf([]string{})),
-			},
-		},
-	}
-
-	for _, test := range tests {
-		var got []string
-
-		err := decodeSlice(test.input, reflect.ValueOf(&got))
-
-		if test.shouldError {
-			if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(UnmarshalTypeError{})) {
-				t.Errorf("%v != %v", err, test.wantError)
-			}
-		} else {
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !cmp.Equal(got, test.want) {
-				t.Errorf("%v != %v", got, test.want)
-			}
-		}
-	}
-
-	/*** []int tests ***/
-	tests = []struct {
-		input       interface{}
-		want        interface{}
-		shouldError bool
-		wantError   error
-	}{
-		{
-			input: []string{"1000", "1001"},
-			want:  []int{1000, 1001},
-		},
-		{
-			input:       "/bin/bash",
-			want:        []int{},
-			shouldError: true,
-			wantError: &UnmarshalTypeError{
-				val: reflect.ValueOf("/bin/bash").String(),
-				typ: reflect.PtrTo(reflect.TypeOf([]int{})),
-			},
-		},
-	}
-
-	for _, test := range tests {
-		var got []int
-
-		err := decodeSlice(test.input, reflect.ValueOf(&got))
-
-		if test.shouldError {
-			if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(UnmarshalTypeError{})) {
-				t.Errorf("%v != %v", err, test.wantError)
-			}
-		} else {
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !cmp.Equal(got, test.want) {
-				t.Errorf("%v != %v", got, test.want)
-			}
-		}
-	}
-
-	/*** []uint tests ***/
-	tests = []struct {
-		input       interface{}
-		want        interface{}
-		shouldError bool
-		wantError   error
-	}{
-		{
-			input: []string{"1000", "1001"},
-			want:  []uint{1000, 1001},
-		},
-		{
-			input:       "/bin/bash",
-			want:        []int{},
-			shouldError: true,
-			wantError: &UnmarshalTypeError{
-				val: reflect.ValueOf("/bin/bash").String(),
-				typ: reflect.PtrTo(reflect.TypeOf([]uint{})),
-			},
-		},
-	}
-
-	for _, test := range tests {
-		var got []uint
-
-		err := decodeSlice(test.input, reflect.ValueOf(&got))
-
-		if test.shouldError {
-			if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(UnmarshalTypeError{})) {
-				t.Errorf("%v != %v", err, test.wantError)
-			}
-		} else {
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !cmp.Equal(got, test.want) {
-				t.Errorf("%v != %v", got, test.want)
-			}
-		}
-	}
-
-	/*** []struct tests ***/
-	type user struct {
-		Name  string `ini:"name"`
-		Shell string `ini:"shell"`
-	}
-	tests = []struct {
-		input       interface{}
-		want        interface{}
-		shouldError bool
-		wantError   error
+		init        func() interface{}
 	}{
 		{
 			input: []section{
 				{
-					name: "user",
+					name: "section",
 					props: map[string]property{
-						"name": {
-							key: "name",
+						"property": {
+							key: "property",
 							vals: map[string][]string{
-								"": {"root"},
-							},
-						},
-						"shell": {
-							key: "shell",
-							vals: map[string][]string{
-								"": {"/bin/bash"},
+								"": {"value0"},
 							},
 						},
 					},
 				},
 				{
-					name: "user",
+					name: "section",
 					props: map[string]property{
-						"name": {
-							key: "name",
+						"property": {
+							key: "property",
 							vals: map[string][]string{
-								"": {"admin"},
-							},
-						},
-						"shell": {
-							key: "shell",
-							vals: map[string][]string{
-								"": {"/bin/zsh"},
+								"": {"value1"},
 							},
 						},
 					},
 				},
 			},
-			want: []user{
+			want: &[]struct {
+				Property string `ini:"property"`
+			}{
 				{
-					Name:  "root",
-					Shell: "/bin/bash",
+					Property: "value0",
 				},
 				{
-					Name:  "admin",
-					Shell: "/bin/zsh",
+					Property: "value1",
 				},
 			},
-		},
-	}
-
-	for _, test := range tests {
-		var got []user
-
-		err := decodeSlice(test.input.([]section), reflect.ValueOf(&got))
-
-		if test.shouldError {
-			if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(UnmarshalTypeError{})) {
-				t.Errorf("%v != %v", err, test.wantError)
-			}
-		} else {
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !cmp.Equal(got, test.want) {
-				t.Errorf("%v != %v", got, test.want)
-			}
-		}
-	}
-
-	/*** []bool tests ***/
-	tests = []struct {
-		input       interface{}
-		want        interface{}
-		shouldError bool
-		wantError   error
-	}{
-		{
-			input: []string{"true", "false"},
-			want:  []bool{true, false},
-		},
-		{
-			input:       "/bin/bash",
-			want:        []bool{},
-			shouldError: true,
-			wantError: &UnmarshalTypeError{
-				val: reflect.ValueOf("/bin/bash").String(),
-				typ: reflect.PtrTo(reflect.TypeOf([]bool{})),
+			init: func() interface{} {
+				return &[]struct {
+					Property string `ini:"property"`
+				}{}
 			},
 		},
 	}
 
 	for _, test := range tests {
-		var got []bool
+		t.Run(test.description, func(t *testing.T) {
+			got := test.init()
 
-		err := decodeSlice(test.input, reflect.ValueOf(&got))
+			err := decodeSliceStruct(test.input, reflect.ValueOf(got))
+			if test.shouldError {
+				if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(DecodeError{}, UnmarshalTypeError{})) {
+					t.Fatalf("decodeSliceStruct(%v) returned %v, want %v", test.input, err, test.wantError)
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("decodeSliceStruct(%v) returned %v, want %v", test.input, err, test.wantError)
+				}
 
-		if test.shouldError {
-			if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(UnmarshalTypeError{})) {
-				t.Errorf("%v != %v", err, test.wantError)
+				if !cmp.Equal(got, test.want) {
+					t.Errorf("decodeSliceStruct(%v) = %v, want %v", test.input, got, test.want)
+				}
 			}
-		} else {
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !cmp.Equal(got, test.want) {
-				t.Errorf("%v != %v", got, test.want)
-			}
-		}
+		})
 	}
+}
 
-	/*** []float64 tests ***/
-	tests = []struct {
-		input       interface{}
+func TestDecodeSlice(t *testing.T) {
+	tests := []struct {
+		description string
+		input       []string
 		want        interface{}
 		shouldError bool
 		wantError   error
+		init        func() interface{}
 	}{
 		{
-			input: []string{"123.456", "654.321"},
-			want:  []float64{123.456, 654.321},
+			description: "string slice",
+			input:       []string{"value0", "value1"},
+			want:        &[]string{"value0", "value1"},
+			init: func() interface{} {
+				return &[]string{}
+			},
 		},
 		{
-			input:       "/bin/bash",
-			want:        []float64{},
+			description: "int slice",
+			input:       []string{"0", "1"},
+			want:        &[]int{0, 1},
+			init: func() interface{} {
+				return &[]int{}
+			},
+		},
+		{
+			description: "uint slice",
+			input:       []string{"0", "1"},
+			want:        &[]uint{0, 1},
+			init: func() interface{} {
+				return &[]uint{}
+			},
+		},
+		{
+			description: "float64 slice",
+			input:       []string{"0.0", "1.0"},
+			want:        &[]float64{0.0, 1.0},
+			init: func() interface{} {
+				return &[]float64{}
+			},
+		},
+		{
+			description: "bool slice",
+			input:       []string{"0", "1"},
+			want:        &[]bool{false, true},
+			init: func() interface{} {
+				return &[]bool{}
+			},
+		},
+		{
+			description: "struct slice",
+			input:       []string{"0", "1"},
+			want:        &[]struct{}{{}, {}},
 			shouldError: true,
 			wantError: &UnmarshalTypeError{
-				val: reflect.ValueOf("/bin/bash").String(),
-				typ: reflect.PtrTo(reflect.TypeOf([]float64{})),
+				val: reflect.ValueOf([]string{"0", "1"}).String(),
+				typ: reflect.PtrTo(reflect.TypeOf([]struct{}{})),
+			},
+			init: func() interface{} {
+				return &[]struct{}{}
+			},
+		},
+		{
+			description: "invalid parse syntax",
+			input:       []string{"one", "two"},
+			want:        &[]bool{true, false},
+			shouldError: true,
+			wantError:   &DecodeError{errors.New("invalid syntax")},
+			init: func() interface{} {
+				return &[]bool{}
 			},
 		},
 	}
 
 	for _, test := range tests {
-		var got []float64
+		t.Run(test.description, func(t *testing.T) {
+			got := test.init()
 
-		err := decodeSlice(test.input, reflect.ValueOf(&got))
+			err := decodeSlice(test.input, reflect.ValueOf(got))
+			if test.shouldError {
+				if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(DecodeError{}, UnmarshalTypeError{})) {
+					t.Fatalf("decodeSlice(%v) returned %v, want %v", test.input, err, test.wantError)
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("decodeSlice(%v) returned %v, want %v", test.input, err, test.wantError)
+				}
 
-		if test.shouldError {
-			if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(UnmarshalTypeError{})) {
-				t.Errorf("%v != %v", err, test.wantError)
+				if !cmp.Equal(got, test.want) {
+					t.Errorf("decodeSlice(%v) = %v, want %v", test.input, got, test.want)
+				}
 			}
-		} else {
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !cmp.Equal(got, test.want) {
-				t.Errorf("%v != %v", got, test.want)
-			}
-		}
-	}
-
-	/*** [][]string tests ***/
-	tests = []struct {
-		input       interface{}
-		want        interface{}
-		shouldError bool
-		wantError   error
-	}{
-		{
-			input:       []string{"/bin/bash"},
-			want:        [][]string{},
-			shouldError: true,
-			wantError: &UnmarshalTypeError{
-				val: reflect.ValueOf("/bin/bash").String(),
-				typ: reflect.PtrTo(reflect.TypeOf([][]string{})),
-			},
-		},
-	}
-
-	for _, test := range tests {
-		var got [][]string
-
-		err := decodeSlice(test.input, reflect.ValueOf(&got))
-
-		if test.shouldError {
-			if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(UnmarshalTypeError{})) {
-				t.Errorf("%v != %v", err, test.wantError)
-			}
-		} else {
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !cmp.Equal(got, test.want) {
-				t.Errorf("%v != %v", got, test.want)
-			}
-		}
+		})
 	}
 }
 
 func TestDecodeMap(t *testing.T) {
-
-	/* map[string]string tests */
 	tests := []struct {
-		input       interface{}
+		description string
+		input       property
 		want        interface{}
 		shouldError bool
 		wantError   error
+		init        func() interface{}
 	}{
 		{
-			input: property{
-				key: "Greeting",
-				vals: map[string][]string{
-					"en": {"Hello"},
-					"fr": {"Bonjour"},
-				},
-			},
-			want: map[string]string{
-				"en": "Hello",
-				"fr": "Bonjour",
+			description: "map[string]string",
+			input:       property{key: "p", vals: map[string][]string{"k1": {"v1"}, "k2": {"v2"}}},
+			want:        &map[string]string{"k1": "v1", "k2": "v2"},
+			init: func() interface{} {
+				return &map[string]string{}
 			},
 		},
 		{
-			input:       "Greeting",
+			description: "map[string]int",
+			input:       property{key: "p", vals: map[string][]string{"k1": {"0"}, "k2": {"1"}}},
+			want:        &map[string]int{"k1": 0, "k2": 1},
+			init: func() interface{} {
+				return &map[string]int{}
+			},
+		},
+		{
+			description: "map[string]uint",
+			input:       property{key: "p", vals: map[string][]string{"k1": {"0"}, "k2": {"1"}}},
+			want:        &map[string]uint{"k1": 0, "k2": 1},
+			init: func() interface{} {
+				return &map[string]uint{}
+			},
+		},
+		{
+			description: "map[string]float64",
+			input:       property{key: "p", vals: map[string][]string{"k1": {"0.0"}, "k2": {"1.0"}}},
+			want:        &map[string]float64{"k1": 0.0, "k2": 1.0},
+			init: func() interface{} {
+				return &map[string]float64{}
+			},
+		},
+		{
+			description: "map[string]bool",
+			input:       property{key: "p", vals: map[string][]string{"k1": {"0"}, "k2": {"1"}}},
+			want:        &map[string]bool{"k1": false, "k2": true},
+			init: func() interface{} {
+				return &map[string]bool{}
+			},
+		},
+		{
+			description: "map[string][]string",
+			input:       property{key: "p", vals: map[string][]string{"k1": {"v0", "v1"}}},
+			want:        &map[string][]string{"k1": {"v0", "v1"}},
+			init: func() interface{} {
+				return &map[string][]string{}
+			},
+		},
+		{
+			description: "map[string]struct{}",
+			input:       property{key: "p", vals: map[string][]string{"k1": {"0"}, "k2": {"1"}}},
+			want:        &map[string]struct{}{},
 			shouldError: true,
-			wantError: &UnmarshalTypeError{
-				val: reflect.ValueOf("Greeting").String(),
-				typ: reflect.PtrTo(reflect.TypeOf(map[string]string{})),
+			wantError:   &UnmarshalTypeError{val: reflect.ValueOf(property{}).String(), typ: reflect.TypeOf(&map[string]struct{}{})},
+			init: func() interface{} {
+				return &map[string]struct{}{}
 			},
 		},
 	}
 
 	for _, test := range tests {
-		var got map[string]string
-		rv := reflect.ValueOf(&got)
+		t.Run(test.description, func(t *testing.T) {
+			got := test.init()
 
-		err := decodeMap(test.input, rv)
+			err := decodeMap(test.input, reflect.ValueOf(got))
+			if test.shouldError {
+				if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(DecodeError{}, UnmarshalTypeError{})) {
+					t.Fatalf("decodeMap(%v) returned %v, want %v", test.input, err, test.wantError)
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("decodeMap(%v) returned %v, want %v", test.input, err, test.wantError)
+				}
 
-		if test.shouldError {
-			if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(UnmarshalTypeError{})) {
-				t.Errorf("%v != %v", err, test.wantError)
+				if !cmp.Equal(got, test.want) {
+					t.Errorf("decodeMap(%v) = %v, want %v", test.input, got, test.want)
+				}
 			}
-		} else {
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !cmp.Equal(got, test.want) {
-				t.Errorf("%v != %v", got, test.want)
-			}
-		}
-	}
-
-	/* map[string]int tests */
-	tests = []struct {
-		input       interface{}
-		want        interface{}
-		shouldError bool
-		wantError   error
-	}{
-		{
-			input: property{
-				key: "Planets",
-				vals: map[string][]string{
-					"Mercury": {"1"},
-					"Venus":   {"2"},
-				},
-			},
-			want: map[string]int{
-				"Mercury": 1,
-				"Venus":   2,
-			},
-		},
-		{
-			input:       "Planets",
-			shouldError: true,
-			wantError: &UnmarshalTypeError{
-				val: reflect.ValueOf("Planets").String(),
-				typ: reflect.PtrTo(reflect.TypeOf(map[string]int{})),
-			},
-		},
-	}
-
-	for _, test := range tests {
-		var got map[string]int
-		rv := reflect.ValueOf(&got)
-
-		err := decodeMap(test.input, rv)
-
-		if test.shouldError {
-			if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(UnmarshalTypeError{})) {
-				t.Errorf("%v != %v", err, test.wantError)
-			}
-		} else {
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !cmp.Equal(got, test.want) {
-				t.Errorf("%v != %v", got, test.want)
-			}
-		}
-	}
-
-	/* map[string]float64 tests */
-	tests = []struct {
-		input       interface{}
-		want        interface{}
-		shouldError bool
-		wantError   error
-	}{
-		{
-			input: property{
-				key: "Currency",
-				vals: map[string][]string{
-					"USD": {"1.0"},
-					"GBP": {"1.2"},
-				},
-			},
-			want: map[string]float64{
-				"USD": 1.0,
-				"GBP": 1.2,
-			},
-		},
-		{
-			input:       "Currency",
-			shouldError: true,
-			wantError: &UnmarshalTypeError{
-				val: reflect.ValueOf("Currency").String(),
-				typ: reflect.PtrTo(reflect.TypeOf(map[string]float64{})),
-			},
-		},
-	}
-
-	for _, test := range tests {
-		var got map[string]float64
-		rv := reflect.ValueOf(&got)
-
-		err := decodeMap(test.input, rv)
-
-		if test.shouldError {
-			if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(UnmarshalTypeError{})) {
-				t.Errorf("%v != %v", err, test.wantError)
-			}
-		} else {
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !cmp.Equal(got, test.want) {
-				t.Errorf("%v != %v", got, test.want)
-			}
-		}
-	}
-
-	/* map[string]bool tests */
-	tests = []struct {
-		input       interface{}
-		want        interface{}
-		shouldError bool
-		wantError   error
-	}{
-		{
-			input: property{
-				key: "Switch",
-				vals: map[string][]string{
-					"On":  {"true"},
-					"Off": {"false"},
-				},
-			},
-			want: map[string]bool{
-				"On":  true,
-				"Off": false,
-			},
-		},
-		{
-			input:       "Switch",
-			shouldError: true,
-			wantError: &UnmarshalTypeError{
-				val: reflect.ValueOf("Switch").String(),
-				typ: reflect.PtrTo(reflect.TypeOf(map[string]bool{})),
-			},
-		},
-	}
-
-	for _, test := range tests {
-		var got map[string]bool
-		rv := reflect.ValueOf(&got)
-
-		err := decodeMap(test.input, rv)
-
-		if test.shouldError {
-			if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(UnmarshalTypeError{})) {
-				t.Errorf("%v != %v", err, test.wantError)
-			}
-		} else {
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !cmp.Equal(got, test.want) {
-				t.Errorf("%v != %v", got, test.want)
-			}
-		}
-	}
-
-	/* map[string]uint tests */
-	tests = []struct {
-		input       interface{}
-		want        interface{}
-		shouldError bool
-		wantError   error
-	}{
-		{
-			input: property{
-				key: "Planets",
-				vals: map[string][]string{
-					"Mercury": {"1"},
-					"Venus":   {"2"},
-				},
-			},
-			want: map[string]uint{
-				"Mercury": 1,
-				"Venus":   2,
-			},
-		},
-		{
-			input:       "Planets",
-			shouldError: true,
-			wantError: &UnmarshalTypeError{
-				val: reflect.ValueOf("Planets").String(),
-				typ: reflect.PtrTo(reflect.TypeOf(map[string]uint{})),
-			},
-		},
-	}
-
-	for _, test := range tests {
-		var got map[string]uint
-		rv := reflect.ValueOf(&got)
-
-		err := decodeMap(test.input, rv)
-
-		if test.shouldError {
-			if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(UnmarshalTypeError{})) {
-				t.Errorf("%v != %v", err, test.wantError)
-			}
-		} else {
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !cmp.Equal(got, test.want) {
-				t.Errorf("%v != %v", got, test.want)
-			}
-		}
-	}
-
-	/* map[string]interface{} tests */
-	tests = []struct {
-		input       interface{}
-		want        interface{}
-		shouldError bool
-		wantError   error
-	}{
-		{
-			input: property{
-				key: "Planets",
-				vals: map[string][]string{
-					"Mercury": {"1"},
-					"Venus":   {"2"},
-				},
-			},
-			shouldError: true,
-			wantError: &UnmarshalTypeError{
-				val: reflect.ValueOf(property{}).String(),
-				typ: reflect.PtrTo(reflect.TypeOf(map[string]interface{}{})),
-			},
-		},
-	}
-
-	for _, test := range tests {
-		var got map[string]interface{}
-		rv := reflect.ValueOf(&got)
-
-		err := decodeMap(test.input, rv)
-
-		if test.shouldError {
-			if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(UnmarshalTypeError{})) {
-				t.Errorf("%v != %v", err, test.wantError)
-			}
-		} else {
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !cmp.Equal(got, test.want) {
-				t.Errorf("%v != %v", got, test.want)
-			}
-		}
-	}
-
-	/* map[string][]string tests */
-	tests = []struct {
-		input       interface{}
-		want        interface{}
-		shouldError bool
-		wantError   error
-	}{
-		{
-			input: property{
-				key: "Greeting",
-				vals: map[string][]string{
-					"": {"Hello", "Bonjour"},
-				},
-			},
-			want: map[string][]string{
-				"": {"Hello", "Bonjour"},
-			},
-		},
-		{
-			input:       "Greeting",
-			shouldError: true,
-			wantError: &UnmarshalTypeError{
-				val: reflect.ValueOf("Greeting").String(),
-				typ: reflect.PtrTo(reflect.TypeOf(map[string][]string{})),
-			},
-		},
-	}
-
-	for _, test := range tests {
-		var got map[string][]string
-		rv := reflect.ValueOf(&got)
-
-		err := decodeMap(test.input, rv)
-
-		if test.shouldError {
-			if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(UnmarshalTypeError{})) {
-				t.Errorf("%v != %v", err, test.wantError)
-			}
-		} else {
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !cmp.Equal(got, test.want) {
-				t.Errorf("%v != %v", got, test.want)
-			}
-		}
+		})
 	}
 }
 
 func TestDecode(t *testing.T) {
-	type user struct {
-		Shell  string   `ini:"shell"`
-		UID    int      `ini:"uid"`
-		Groups []string `ini:"group"`
-	}
-	type config struct {
-		User    user     `ini:"user"`
-		Sources []string `ini:"source"`
-	}
-
 	tests := []struct {
-		input parseTree
-		want  config
+		description string
+		input       parseTree
+		want        interface{}
+		shouldError bool
+		wantError   error
+		init        func() interface{}
 	}{
 		{
 			input: parseTree{
 				global: section{
 					name: "",
 					props: map[string]property{
-						"source": {
-							key: "source",
+						"property": {
+							key: "property",
 							vals: map[string][]string{
-								"": {"passwd", "ldap"},
+								"": {"value"},
+							},
+						},
+						"map": {
+							key: "map",
+							vals: map[string][]string{
+								"k1": {"v1"},
+								"k2": {"v2"},
 							},
 						},
 					},
 				},
 				sections: map[string][]section{
-					"user": {
+					"section1": {
 						{
-							name: "user",
+							name: "section1",
 							props: map[string]property{
-								"shell": {
-									key: "shell",
+								"key1": {
+									key: "key1",
 									vals: map[string][]string{
-										"": {"/bin/bash"},
+										"": {"value1"},
 									},
 								},
-								"uid": {
-									key: "uid",
+							},
+						},
+						{
+							name: "section1",
+							props: map[string]property{
+								"key1": {
+									key: "key1",
 									vals: map[string][]string{
-										"": {"42"},
-									},
-								},
-								"group": {
-									key: "group",
-									vals: map[string][]string{
-										"": {"wheel", "video"},
+										"": {"value2"},
 									},
 								},
 							},
@@ -1084,30 +653,56 @@ func TestDecode(t *testing.T) {
 					},
 				},
 			},
-			want: config{
-				User: user{
-					Shell:  "/bin/bash",
-					UID:    42,
-					Groups: []string{"wheel", "video"},
+			want: &struct {
+				Property string            `ini:"property"`
+				Map      map[string]string `ini:"map"`
+				Section  []struct {
+					Key string `ini:"key1"`
+				} `ini:"section1"`
+			}{
+				Property: "value",
+				Map: map[string]string{
+					"k1": "v1",
+					"k2": "v2",
 				},
-				Sources: []string{"passwd", "ldap"},
+				Section: []struct {
+					Key string `ini:"key1"`
+				}{
+					{Key: "value1"},
+					{Key: "value2"},
+				},
+			},
+			init: func() interface{} {
+				return &struct {
+					Property string            `ini:"property"`
+					Map      map[string]string `ini:"map"`
+					Section  []struct {
+						Key string `ini:"key1"`
+					} `ini:"section1"`
+				}{}
 			},
 		},
 	}
 
 	for _, test := range tests {
-		var got config
-		rv := reflect.ValueOf(&got)
+		t.Run(test.description, func(t *testing.T) {
+			got := test.init()
 
-		err := decode(test.input, rv)
+			err := decode(test.input, reflect.ValueOf(got))
+			if test.shouldError {
+				if !cmp.Equal(err, test.wantError, cmpopts.IgnoreUnexported(DecodeError{}, UnmarshalTypeError{})) {
+					t.Fatalf("decode(%+v) returned %v, want %v", test.input, err, test.wantError)
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("decode(%+v) returned %v, want %v", test.input, err, test.wantError)
+				}
 
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if !cmp.Equal(got, test.want) {
-			t.Errorf("%v != %v", got, test.want)
-		}
+				if !cmp.Equal(got, test.want) {
+					t.Errorf("decode(%+v) = %+v, want %+v\ndiff -want +got\n%v", test.input, got, test.want, cmp.Diff(test.want, got))
+				}
+			}
+		})
 	}
 }
 
@@ -1124,8 +719,11 @@ func TestUnmarshal(t *testing.T) {
 	}
 
 	tests := []struct {
-		input string
-		want  config
+		description string
+		input       string
+		want        config
+		shouldError bool
+		wantError   error
 	}{
 		{
 			input: `source=passwd
@@ -1171,15 +769,17 @@ group=video`,
 	}
 
 	for _, test := range tests {
-		var got config
-		err := Unmarshal([]byte(test.input), &got)
-		if err != nil {
-			t.Fatal(err)
-		}
+		t.Run(test.description, func(t *testing.T) {
+			var got config
+			err := Unmarshal([]byte(test.input), &got)
+			if err != nil {
+				t.Fatalf("Unmarshal(%v) returned %v, want %v", test.input, err, test.wantError)
+			}
 
-		if !cmp.Equal(got, test.want) {
-			t.Errorf("%+v != %+v", got, test.want)
-		}
+			if !cmp.Equal(got, test.want) {
+				t.Errorf("Unmarshal(%v) = %v, want %v\ndiff -want +got\n%v", test.input, got, want, cmp.Diff(test.want, got))
+			}
+		})
 	}
 }
 
@@ -1189,10 +789,13 @@ func TestUnmarshalWildcard(t *testing.T) {
 		Shell   string `ini:"shell"`
 	}
 	tests := []struct {
-		input string
-		want  struct {
+		description string
+		input       string
+		want        struct {
 			Users []User `ini:"*"`
 		}
+		shouldError bool
+		wantError   error
 	}{
 		{
 			input: "[root]\nshell=/bin/bash\n\n[admin]\nshell=/bin/zsh",
@@ -1214,18 +817,20 @@ func TestUnmarshalWildcard(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		var got struct {
-			Users []User `ini:"*"`
-		}
-		err := Unmarshal([]byte(test.input), &got)
-		if err != nil {
-			t.Fatal(err)
-		}
+		t.Run(test.description, func(t *testing.T) {
+			var got struct {
+				Users []User `ini:"*"`
+			}
+			err := Unmarshal([]byte(test.input), &got)
+			if err != nil {
+				t.Fatalf("Unmarshal(%+v) return %v, want %v", test.input, err, test.wantError)
+			}
 
-		if !cmp.Equal(got, test.want, cmp.Options{cmpopts.SortSlices(func(a, b User) bool {
-			return a.ININame > b.ININame
-		})}) {
-			t.Errorf("%+v != %+v", got, test.want)
-		}
+			if !cmp.Equal(got, test.want, cmp.Options{cmpopts.SortSlices(func(a, b User) bool {
+				return a.ININame > b.ININame
+			})}) {
+				t.Errorf("Unmarshal(%+v) = %v, want %v\ndiff -want +got\n%v", test.input, got, test.want, cmp.Diff(test.want, got))
+			}
+		})
 	}
 }
