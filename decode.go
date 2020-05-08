@@ -31,10 +31,6 @@ func (e DecodeError) Error() string {
 	return e.err.Error()
 }
 
-func (e DecodeError) Unwrap() error {
-	return e.err
-}
-
 // Unmarshal parses the INI-encoded data and stores the result in the value
 // pointed to by v. If v is nil or not a pointer to a struct, Unmarshal returns
 // an UnmarshalTypeError; INI-encoded data must be encoded into a struct.
