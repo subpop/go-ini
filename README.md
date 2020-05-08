@@ -3,7 +3,7 @@
 [![GoDoc](https://godoc.org/github.com/subpop/go-ini?status.svg)](https://godoc.org/github.com/subpop/go-ini)
 [![Build Status](https://travis-ci.org/subpop/go-ini.svg?branch=master)](https://travis-ci.org/subpop/go-ini)
 [![Go Report Card](https://goreportcard.com/badge/github.com/subpop/go-ini)](https://goreportcard.com/report/github.com/subpop/go-ini)
-[![codecov](https://codecov.io/gh/subpop/go-ini/branch/master/graph/badge.svg)](https://codecov.io/gh/subpop/go-ini)
+[![Coverage Status](https://coveralls.io/repos/github/subpop/go-ini/badge.svg)](https://coveralls.io/github/subpop/go-ini)
 
 
 A Go package that encodes and decodes INI-files.
