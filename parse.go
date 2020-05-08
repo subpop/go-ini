@@ -1,25 +1,13 @@
 package ini
 
-import (
-	"errors"
-	"fmt"
-)
-
+// unexpectedTokenErr describes a token that was not expected by the parser in
+// the lexer's current state.
 type unexpectedTokenErr struct {
-	got  token
-	want token
+	got token
 }
 
-func (e *unexpectedTokenErr) Error() string {
-	return fmt.Sprintf("unexpected token: %v, want %v", e.got, e.want)
-}
-
-type invalidPropertyErr struct {
-	p property
-}
-
-func (e *invalidPropertyErr) Error() string {
-	return "invalid property: " + e.p.key
+func (e unexpectedTokenErr) Error() string {
+	return "unexpected token: " + e.got.val
 }
 
 type parser struct {
@@ -50,6 +38,8 @@ func (p *parser) backup() {
 	p.prev = &p.tok
 }
 
+// parse advances the token scanner repeatedly, constructing a parseTree on
+// each step through the token stream until an EOF token is encountered.
 func (p *parser) parse() error {
 	for {
 		if p.tok.typ == tokenEOF {
@@ -61,7 +51,7 @@ func (p *parser) parse() error {
 		case tokenEOF:
 			return nil
 		case tokenError:
-			return errors.New(p.tok.val)
+			return &unexpectedTokenErr{p.tok}
 		case tokenSection:
 			sec := newSection(p.tok.val)
 			if err := p.parseSection(&sec); err != nil {
@@ -85,6 +75,8 @@ func (p *parser) parse() error {
 	}
 }
 
+// parseSection repeatedly advances the token scanner, constructing a section
+// parseTree element from the scanned values.
 func (p *parser) parseSection(out *section) error {
 	name := p.tok.val
 	out.name = name
@@ -93,7 +85,7 @@ func (p *parser) parseSection(out *section) error {
 		p.nextToken()
 		switch p.tok.typ {
 		case tokenError:
-			return errors.New(p.tok.val)
+			return &unexpectedTokenErr{got: p.tok}
 		case tokenPropKey:
 			prop, err := out.get(p.tok.val)
 			if err != nil {
@@ -115,6 +107,8 @@ func (p *parser) parseSection(out *section) error {
 	}
 }
 
+// parseProperty repeatedly advances the token scanner, constructing a property
+// parseTree element from the scanned values.
 func (p *parser) parseProperty(out *property) error {
 	key := p.tok.val
 	subkey := ""
@@ -125,23 +119,10 @@ func (p *parser) parseProperty(out *property) error {
 		p.nextToken()
 	}
 
-	if p.tok.typ != tokenAssignment {
-		return &unexpectedTokenErr{
-			got: p.tok,
-			want: token{
-				typ: tokenAssignment,
-				val: "=",
-			},
-		}
-	}
-
 	p.nextToken()
 	if p.tok.typ != tokenPropValue {
 		return &unexpectedTokenErr{
 			got: p.tok,
-			want: token{
-				typ: tokenPropValue,
-			},
 		}
 	}
 	val := p.tok.val
