@@ -78,6 +78,24 @@ func TestEncodeProperty(t *testing.T) {
 			want: bytes.NewBufferString("k=a\nk=b\n"),
 		},
 		{
+			desc: "encode map",
+			input: struct {
+				key string
+				val interface{}
+			}{"k", map[string]string{"a": "a", "b": "b"}},
+			want: bytes.NewBufferString("k[a]=a\nk[b]=b\n"),
+		},
+		{
+			desc: "encode error map struct",
+			input: struct {
+				key string
+				val interface{}
+			}{"k", map[string]struct{}{"a": {}}},
+			want:        nil,
+			shouldError: true,
+			wantError:   &MarshalTypeError{reflect.TypeOf(struct{}{})},
+		},
+		{
 			desc: "encode struct",
 			input: struct {
 				key string

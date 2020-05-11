@@ -202,6 +202,16 @@ func encodeProperty(buf *bytes.Buffer, key string, rv reflect.Value) error {
 					return err
 				}
 			}
+		case reflect.Map:
+			iter := rv.MapRange()
+			for iter.Next() {
+				k := iter.Key()
+				v := iter.Value()
+				subkey := key + "[" + k.String() + "]"
+				if err := encodeProperty(buf, subkey, v); err != nil {
+					return err
+				}
+			}
 		case reflect.String:
 			data = []byte(rv.String())
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
