@@ -54,6 +54,14 @@ func TestEncodeProperty(t *testing.T) {
 			want: bytes.NewBufferString("k=1.1\n"),
 		},
 		{
+			desc: "encode uint",
+			input: struct {
+				key string
+				val interface{}
+			}{"k", uint(1)},
+			want: bytes.NewBufferString("k=1\n"),
+		},
+		{
 			desc: "encode bool",
 			input: struct {
 				key string
