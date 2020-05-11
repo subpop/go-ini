@@ -12,6 +12,7 @@ func ExampleMarshal() {
 		Server string
 		Port   int
 		File   string
+		Path   map[string]string
 	}
 
 	type Person struct {
@@ -35,6 +36,7 @@ func ExampleMarshal() {
 			Server: "192.0.2.62",
 			Port:   143,
 			File:   "payroll.dat",
+			Path:   map[string]string{"unix": "/var/db"},
 		},
 	}
 
@@ -54,6 +56,7 @@ func ExampleMarshal() {
 	// Server=192.0.2.62
 	// Port=143
 	// File=payroll.dat
+	// Path[unix]=/var/db
 }
 
 func ExampleUnmarshal() {
@@ -61,6 +64,7 @@ func ExampleUnmarshal() {
 		Server string
 		Port   int
 		File   string
+		Path   map[string]string
 	}
 
 	type Person struct {
@@ -85,12 +89,14 @@ func ExampleUnmarshal() {
 	[Database]
 	Server=192.0.2.62
 	Port=143
-	File=payroll.dat`)
+	File=payroll.dat
+	Path[unix]=/var/db
+	Path[win32]=C:\db`)
 
 	if err := ini.Unmarshal(data, &config); err != nil {
 		fmt.Println("error:", err)
 	}
 	fmt.Println(config)
 	// Output:
-	// {1.2.3 {John Doe Acme Widgets Inc.} {192.0.2.62 143 payroll.dat}}
+	// {1.2.3 {John Doe Acme Widgets Inc.} {192.0.2.62 143 payroll.dat map[unix:/var/db win32:C:\db]}}
 }
