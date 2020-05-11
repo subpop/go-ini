@@ -58,7 +58,7 @@ func TestEncodeProperty(t *testing.T) {
 			input: struct {
 				key string
 				val interface{}
-			}{"k", "true"},
+			}{"k", true},
 			want: bytes.NewBufferString("k=true\n"),
 		},
 		{
