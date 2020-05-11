@@ -10,11 +10,11 @@ import (
 // A MarshalTypeError represents a type that cannot be encoded in an INI-compatible
 // textual format.
 type MarshalTypeError struct {
-	Type reflect.Type
+	typ reflect.Type
 }
 
 func (e *MarshalTypeError) Error() string {
-	return "ini: unsupported type: " + e.Type.String()
+	return "ini: unsupported type: " + e.typ.String()
 }
 
 // A MarshalerError represents an error from calling a MarshalText method.
@@ -105,7 +105,7 @@ func encode(buf *bytes.Buffer, rv reflect.Value) error {
 	}
 
 	if rv.Type().Kind() != reflect.Struct {
-		return &MarshalTypeError{Type: rv.Type()}
+		return &MarshalTypeError{typ: rv.Type()}
 	}
 
 	// first pass, skipping structs
@@ -153,7 +153,7 @@ func encode(buf *bytes.Buffer, rv reflect.Value) error {
 
 func encodeSection(buf *bytes.Buffer, key string, rv reflect.Value) error {
 	if rv.Type().Kind() != reflect.Struct {
-		return &MarshalTypeError{Type: rv.Type()}
+		return &MarshalTypeError{typ: rv.Type()}
 	}
 
 	buf.WriteString("[" + key + "]\n")
@@ -213,7 +213,7 @@ func encodeProperty(buf *bytes.Buffer, key string, rv reflect.Value) error {
 		case reflect.Bool:
 			data = []byte(strconv.FormatBool(rv.Bool()))
 		default:
-			return &MarshalTypeError{Type: rv.Type()}
+			return &MarshalTypeError{typ: rv.Type()}
 		}
 
 	}
