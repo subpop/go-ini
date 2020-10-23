@@ -1,4 +1,4 @@
-module github.com/subpop/go-ini
+module git.sr.ht/~spc/go-ini
 
 go 1.12
 
