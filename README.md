@@ -1,10 +1,8 @@
-# go-ini
-
-[![GoDoc](https://godoc.org/github.com/subpop/go-ini?status.svg)](https://godoc.org/github.com/subpop/go-ini)
-[![Build Status](https://travis-ci.org/subpop/go-ini.svg?branch=master)](https://travis-ci.org/subpop/go-ini)
+[![PkgGoDev](https://pkg.go.dev/badge/git.sr.ht/~spc/go-ini)](https://pkg.go.dev/git.sr.ht/~spc/go-ini)
+[![builds.sr.ht status](https://builds.sr.ht/~spc/go-ini.svg)](https://builds.sr.ht/~spc/go-ini?)
 [![Go Report Card](https://goreportcard.com/badge/github.com/subpop/go-ini)](https://goreportcard.com/report/github.com/subpop/go-ini)
-[![Coverage Status](https://coveralls.io/repos/github/subpop/go-ini/badge.svg)](https://coveralls.io/github/subpop/go-ini)
 
+# go-ini
 
 A Go package that encodes and decodes INI-files.
 
