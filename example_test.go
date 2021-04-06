@@ -100,18 +100,3 @@ func ExampleUnmarshal() {
 	// Output:
 	// {1.2.3 {John Doe Acme Widgets Inc.} {192.0.2.62 143 payroll.dat map[unix:/var/db win32:C:\db]}}
 }
-
-func ExampleUnmarshalMap() {
-	data := []byte(`Name=libfoo
-	Version=1.2.3
-	Date=2021-04-01`)
-
-	meta := make(map[string]string)
-
-	if err := ini.Unmarshal(data, &meta); err != nil {
-		fmt.Println("error:", err)
-	}
-	fmt.Println(meta)
-	// Output:
-	// map[Date:2021-04-01 Name:libfoo Version:1.2.3]
-}

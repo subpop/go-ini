@@ -607,7 +607,6 @@ func TestDecode(t *testing.T) {
 		init        func() interface{}
 	}{
 		{
-			description: "decode into struct",
 			input: parseTree{
 				global: section{
 					name: "",
@@ -681,35 +680,6 @@ func TestDecode(t *testing.T) {
 						Key string `ini:"key1"`
 					} `ini:"section1"`
 				}{}
-			},
-		},
-		{
-			description: "decode into map",
-			input: parseTree{
-				global: section{
-					name: "",
-					props: map[string]property{
-						"p1": {
-							key: "p1",
-							vals: map[string][]string{
-								"": {"val1"},
-							},
-						},
-						"p2": {
-							key: "p2",
-							vals: map[string][]string{
-								"": {"val2"},
-							},
-						},
-					},
-				},
-			},
-			want: &map[string]string{
-				"p1": "val1",
-				"p2": "val2",
-			},
-			init: func() interface{} {
-				return &map[string]string{}
 			},
 		},
 	}
