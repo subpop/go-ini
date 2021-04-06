@@ -1,6 +1,7 @@
 package ini
 
 import (
+	"fmt"
 	"reflect"
 	"strconv"
 )
@@ -88,38 +89,86 @@ func unmarshal(data []byte, v interface{}, opts Options) error {
 func decode(tree parseTree, rv reflect.Value) error {
 	rv = rv.Elem()
 
-	// Decode global properties first. By treating rv as the struct to decode
-	// into, we ignore any struct fields that are structs.
-	if err := decodeStruct(tree.global, rv.Addr()); err != nil {
-		return err
-	}
+	switch rv.Kind() {
+	case reflect.Map:
+		vv := reflect.MakeMap(rv.Type())
 
-	for i := 0; i < rv.NumField(); i++ {
-		sf := rv.Type().Field(i)
-		sv := rv.Field(i).Addr()
+		for k, v := range tree.global.props {
+			mv := reflect.New(rv.Type().Elem())
 
-		t := newTag(sf)
-		if t.name == "-" {
-			continue
+			if len(v.vals) == 0 {
+				continue
+			}
+
+			var decoderFunc func(string, reflect.Value) error
+
+			switch rv.Type().Elem().Kind() {
+			case reflect.Slice:
+				if err := decodeSlice(v.vals[""], mv); err != nil {
+					return err
+				}
+				vv.SetMapIndex(reflect.ValueOf(k), mv.Elem())
+				continue
+			case reflect.String:
+				decoderFunc = decodeString
+			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+				decoderFunc = decodeInt
+			case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+				decoderFunc = decodeUint
+			case reflect.Float32, reflect.Float64:
+				decoderFunc = decodeFloat
+			case reflect.Bool:
+				decoderFunc = decodeBool
+			default:
+				return &UnmarshalTypeError{
+					val: reflect.ValueOf(v).String(),
+					typ: rv.Type(),
+				}
+			}
+
+			if err := decoderFunc(v.vals[""][0], mv); err != nil {
+				return err
+			}
+
+			vv.SetMapIndex(reflect.ValueOf(k), mv.Elem())
 		}
-
-		sections, err := tree.get(t.name)
-		if err != nil {
+		rv.Set(vv)
+	case reflect.Struct:
+		// Decode global properties first. By treating rv as the struct to decode
+		// into, we ignore any struct fields that are structs.
+		if err := decodeStruct(tree.global, rv.Addr()); err != nil {
 			return err
 		}
 
-		switch sf.Type.Kind() {
-		case reflect.Struct:
-			if err := decodeStruct(sections[0], sv); err != nil {
+		for i := 0; i < rv.NumField(); i++ {
+			sf := rv.Type().Field(i)
+			sv := rv.Field(i).Addr()
+
+			t := newTag(sf)
+			if t.name == "-" {
+				continue
+			}
+
+			sections, err := tree.get(t.name)
+			if err != nil {
 				return err
 			}
-		case reflect.Slice:
-			if sf.Type.Elem().Kind() == reflect.Struct {
-				if err := decodeSliceStruct(sections, sv); err != nil {
+
+			switch sf.Type.Kind() {
+			case reflect.Struct:
+				if err := decodeStruct(sections[0], sv); err != nil {
 					return err
+				}
+			case reflect.Slice:
+				if sf.Type.Elem().Kind() == reflect.Struct {
+					if err := decodeSliceStruct(sections, sv); err != nil {
+						return err
+					}
 				}
 			}
 		}
+	default:
+		return &DecodeError{err: fmt.Errorf("cannot decode into value of type %v", rv.Type())}
 	}
 
 	return nil
