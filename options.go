@@ -12,4 +12,7 @@ type Options struct {
 	// AllowNumberSignComments treats lines beginning with the number sign (#)
 	// as a comment.
 	AllowNumberSignComments bool
+
+	// AllowEmptyValues permits a key to have an empty assignment.
+	AllowEmptyValues bool
 }

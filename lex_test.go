@@ -250,6 +250,17 @@ func TestLexerNextToken(t *testing.T) {
 			},
 		},
 		{
+			description: "empty value accepted",
+			input:       "shell=",
+			want: []token{
+				{tokenPropKey, "shell"},
+				{tokenAssignment, "="},
+				{tokenPropValue, ""},
+				{tokenEOF, ""},
+			},
+			opts: lexerOptions{allowEmptyValues: true},
+		},
+		{
 			description: "missing assignment",
 			input:       "shell",
 			want: []token{

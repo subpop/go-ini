@@ -74,6 +74,7 @@ func unmarshal(data []byte, v interface{}, opts Options) error {
 	p.l.opts.allowMultilineEscapeNewline = opts.AllowMultilineValues
 	p.l.opts.allowMultilineWhitespacePrefix = opts.AllowMultilineValues
 	p.l.opts.allowNumberSignComments = opts.AllowNumberSignComments
+	p.l.opts.allowEmptyValues = opts.AllowEmptyValues
 	if err := p.parse(); err != nil {
 		return err
 	}
