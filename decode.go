@@ -1,6 +1,7 @@
 package ini
 
 import (
+	"fmt"
 	"reflect"
 	"strconv"
 )
@@ -86,40 +87,47 @@ func unmarshal(data []byte, v interface{}, opts Options) error {
 // points to the parsed values stored in the corresponding field of tree. It
 // panics if rv is not a reflect.Ptr to a struct.
 func decode(tree parseTree, rv reflect.Value) error {
-	rv = rv.Elem()
-
-	// Decode global properties first. By treating rv as the struct to decode
-	// into, we ignore any struct fields that are structs.
-	if err := decodeStruct(tree.global, rv.Addr()); err != nil {
-		return err
-	}
-
-	for i := 0; i < rv.NumField(); i++ {
-		sf := rv.Type().Field(i)
-		sv := rv.Field(i).Addr()
-
-		t := newTag(sf)
-		if t.name == "-" {
-			continue
+	switch rv.Kind() {
+	case reflect.Interface, reflect.Ptr:
+		rv = rv.Elem()
+		if rv.Kind() != reflect.Struct {
+			return &DecodeError{err: fmt.Errorf("cannot unmarshal into value of type %v", rv.Kind())}
 		}
-
-		sections, err := tree.get(t.name)
-		if err != nil {
+		// Decode global properties first. By treating rv as the struct to decode
+		// into, we ignore any struct fields that are structs.
+		if err := decodeStruct(tree.global, rv.Addr()); err != nil {
 			return err
 		}
 
-		switch sf.Type.Kind() {
-		case reflect.Struct:
-			if err := decodeStruct(sections[0], sv); err != nil {
+		for i := 0; i < rv.NumField(); i++ {
+			sf := rv.Type().Field(i)
+			sv := rv.Field(i).Addr()
+
+			t := newTag(sf)
+			if t.name == "-" {
+				continue
+			}
+
+			sections, err := tree.get(t.name)
+			if err != nil {
 				return err
 			}
-		case reflect.Slice:
-			if sf.Type.Elem().Kind() == reflect.Struct {
-				if err := decodeSliceStruct(sections, sv); err != nil {
+
+			switch sf.Type.Kind() {
+			case reflect.Struct:
+				if err := decodeStruct(sections[0], sv); err != nil {
 					return err
+				}
+			case reflect.Slice:
+				if sf.Type.Elem().Kind() == reflect.Struct {
+					if err := decodeSliceStruct(sections, sv); err != nil {
+						return err
+					}
 				}
 			}
 		}
+	default:
+		return &DecodeError{err: fmt.Errorf("cannot unmarshal into value of type %v", rv.Type())}
 	}
 
 	return nil

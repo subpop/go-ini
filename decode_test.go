@@ -2,6 +2,7 @@ package ini
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -607,6 +608,7 @@ func TestDecode(t *testing.T) {
 		init        func() interface{}
 	}{
 		{
+			description: "decode top-level struct",
 			input: parseTree{
 				global: section{
 					name: "",
@@ -681,6 +683,16 @@ func TestDecode(t *testing.T) {
 					} `ini:"section1"`
 				}{}
 			},
+		},
+		{
+			description: "decode top-level map",
+			input:       parseTree{},
+			want:        map[string]interface{}{},
+			init: func() interface{} {
+				return map[string]interface{}{}
+			},
+			shouldError: true,
+			wantError:   &DecodeError{err: fmt.Errorf("cannot unmarshal into value of type map[string]interface {}")},
 		},
 	}
 
