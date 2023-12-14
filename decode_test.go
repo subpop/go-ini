@@ -740,6 +740,8 @@ func TestUnmarshal(t *testing.T) {
 	}{
 		{
 			input: `source=passwd
+kver=1
+
 [user]
 name=root
 shell[unix]=/bin/bash
