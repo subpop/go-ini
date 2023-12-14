@@ -58,8 +58,9 @@ func (e DecodeError) Error() string {
 // field as an element in the slice. If a struct field named "ININame" is
 // encountered, the section name decoded into that field.
 //
-// A struct field tag containing "omitempty" will set the destination field to
-// its type's zero value if no corresponding property key was encountered.
+// A struct field may be declared as a pointer to a type. If this is the case,
+// the field's value is set to nil if no such key name is found in the
+// INI-encoded data.
 func Unmarshal(data []byte, v interface{}) error {
 	return unmarshal(data, v, Options{})
 }
