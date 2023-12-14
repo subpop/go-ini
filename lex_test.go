@@ -22,6 +22,16 @@ func TestNext(t *testing.T) {
 				pos:   []int{1, 2, 3},
 			},
 		},
+		{
+			input: "",
+			want: struct {
+				runes []rune
+				pos   []int
+			}{
+				runes: []rune{},
+				pos:   []int{},
+			},
+		},
 	}
 
 	for _, test := range tests {
@@ -57,6 +67,16 @@ func TestPrev(t *testing.T) {
 			}{
 				runes: []rune{'c', 'b', 'a'},
 				pos:   []int{2, 1, 0},
+			},
+		},
+		{
+			input: "",
+			want: struct {
+				runes []rune
+				pos   []int
+			}{
+				runes: []rune{},
+				pos:   []int{},
 			},
 		},
 	}
@@ -108,6 +128,16 @@ func TestPeek(t *testing.T) {
 				pos:   []int{1},
 			},
 		},
+		{
+			input: "",
+			want: struct {
+				runes []rune
+				pos   []int
+			}{
+				runes: []rune{},
+				pos:   []int{},
+			},
+		},
 	}
 
 	for _, test := range tests {
@@ -146,6 +176,16 @@ func TestRpeek(t *testing.T) {
 				pos:   []int{3, 3, 3},
 			},
 		},
+		{
+			input: "",
+			want: struct {
+				runes []rune
+				pos   []int
+			}{
+				runes: []rune{},
+				pos:   []int{},
+			},
+		},
 	}
 
 	for _, test := range tests {
@@ -177,6 +217,11 @@ func TestCurrent(t *testing.T) {
 			input:      "abc",
 			want:       "ab",
 			iterations: 2,
+		},
+		{
+			input:      "",
+			want:       "",
+			iterations: 0,
 		},
 	}
 
@@ -341,6 +386,11 @@ func TestLexerNextToken(t *testing.T) {
 				{tokenPropKey, "shell"},
 				{tokenError, "unexpected character: '\\x00', subkeys must be closed with a ']'"},
 			},
+		},
+		{
+			description: "empty string",
+			input:       "",
+			want:        []token{{tokenEOF, ""}},
 		},
 	}
 
