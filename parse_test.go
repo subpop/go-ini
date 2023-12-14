@@ -144,6 +144,16 @@ func TestParseProp(t *testing.T) {
 			shouldError: true,
 			wantError:   &unexpectedTokenErr{token{tokenError, `unexpected character: '\x00', an assignment must be followed by one or more alphanumeric characters`}},
 		},
+		{
+			description: "empty string",
+			input:       "",
+			want: property{
+				key:  "",
+				vals: map[string][]string{},
+			},
+			shouldError: true,
+			wantError:   &unexpectedTokenErr{token{tokenEOF, ""}},
+		},
 	}
 
 	for _, test := range tests {

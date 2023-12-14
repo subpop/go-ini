@@ -164,7 +164,7 @@ func lexLineStart(l *lexer) stateFunc {
 	switch {
 	case r == eof:
 		l.emit(tokenEOF)
-		return nil
+		return lexLineStart
 	case r == comment:
 		return lexComment
 	case r == numberSign:
