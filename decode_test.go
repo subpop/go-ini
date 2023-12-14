@@ -728,6 +728,7 @@ func TestUnmarshal(t *testing.T) {
 	type config struct {
 		Users   []user   `ini:"user"`
 		Sources []string `ini:"source"`
+		Version string   `ini:"version"`
 	}
 
 	tests := []struct {
