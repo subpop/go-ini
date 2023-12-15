@@ -109,18 +109,21 @@ func decode(tree parseTree, rv reflect.Value) error {
 				continue
 			}
 
-			sections, err := tree.get(t.name)
-			if err != nil {
-				return err
-			}
-
 			switch sf.Type.Kind() {
 			case reflect.Struct:
+				sections, err := tree.get(t.name)
+				if err != nil {
+					return err
+				}
 				if err := decodeStruct(sections[0], sv); err != nil {
 					return err
 				}
 			case reflect.Slice:
 				if sf.Type.Elem().Kind() == reflect.Struct {
+					sections, err := tree.get(t.name)
+					if err != nil {
+						return err
+					}
 					if err := decodeSliceStruct(sections, sv); err != nil {
 						return err
 					}

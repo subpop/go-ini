@@ -165,7 +165,7 @@ func TestParseTreeGet(t *testing.T) {
 		},
 		{
 			input:       "",
-			want:        []section{},
+			want:        nil,
 			shouldError: true,
 			wantError:   &invalidKeyErr{"section name cannot be empty"},
 		},
@@ -208,8 +208,10 @@ func TestParseTreeGet(t *testing.T) {
 			},
 		},
 		{
-			input: "group",
-			want:  []section{},
+			input:       "group",
+			want:        nil,
+			shouldError: true,
+			wantError:   &invalidKeyErr{"section 'group' does not exist"},
 		},
 	}
 

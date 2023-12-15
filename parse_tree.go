@@ -42,8 +42,7 @@ func (p *parseTree) get(name string) ([]section, error) {
 	}
 	sections, ok := p.sections[name]
 	if !ok {
-		sections = make([]section, 0)
-		p.sections[name] = sections
+		return nil, &invalidKeyErr{"section '" + name + "' does not exist"}
 	}
 	return sections, nil
 }

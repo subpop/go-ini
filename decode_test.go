@@ -719,6 +719,10 @@ func TestDecode(t *testing.T) {
 }
 
 func TestUnmarshal(t *testing.T) {
+	type role struct {
+		Name  string `ini:"name"`
+		Level int    `ini:"level"`
+	}
 	type user struct {
 		Name   string            `ini:"name"`
 		Shell  map[string]string `ini:"shell"`
@@ -729,6 +733,7 @@ func TestUnmarshal(t *testing.T) {
 		Users   []user   `ini:"user"`
 		Sources []string `ini:"source"`
 		Version string   `ini:"version"`
+		Role    *role    `ini:"role"`
 	}
 
 	tests := []struct {
