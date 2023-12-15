@@ -55,9 +55,19 @@ func TestParse(t *testing.T) {
 			},
 		},
 		{
-			input: "[user]\nname=root\nshell[unix]=/bin/bash\nshell[win32]=PowerShell.exe\n[user]\nname=admin\nshell[unix]=/bin/bash\nshell[win32]=PowerShell.exe",
+			input: "source=passwd\n[user]\nname=root\nshell[unix]=/bin/bash\nshell[win32]=PowerShell.exe\n[user]\nname=admin\nshell[unix]=/bin/bash\nshell[win32]=PowerShell.exe",
 			want: parseTree{
-				global: newSection(""),
+				global: section{
+					name: "",
+					props: map[string]property{
+						"source": {
+							key: "source",
+							vals: map[string][]string{
+								"": {"passwd"},
+							},
+						},
+					},
+				},
 				sections: map[string][]section{
 					"user": {
 						{
