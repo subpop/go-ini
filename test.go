@@ -1,36 +1,5 @@
 package ini
 
-const testData string = `
-GlobalKey=GlobalValue
-
-[SectionName]
-PropKeyString=PropValString
-PropKeyInt=-1
-PropKeyUint=1
-PropKeyBool=true
-PropKeyFloat=1.2
-PropKeySlice=PropValSlice1
-PropKeySlice=PropValSlice2
-PropKeyMap[MapKey1]=PropValMap1
-PropKeyMap[MapKey2]=PropValMap2
-
-[SectionName2]
-PropKeyString=PropValString
-PropKeyInt=-1
-PropKeyUint=1
-PropKeyBool=true
-PropKeyFloat=1.2
-PropKeySlice=PropValSlice1
-PropKeySlice=PropValSlice2
-PropKeyMap[MapKey1]=PropValMap1
-PropKeyMap[MapKey2]=PropValMap2
-
-[SectionSlice1]
-PropKeyString=PropValString
-
-[SectionSlice1]
-PropKeyString=PropValString`
-
 type testDataSectionName struct {
 	PropKeyString string
 	PropKeyInt    int
