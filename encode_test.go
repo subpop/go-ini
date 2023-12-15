@@ -140,7 +140,7 @@ func TestEncodeProperty(t *testing.T) {
 				}
 
 				if !cmp.Equal(got, test.want, cmp.AllowUnexported(bytes.Buffer{}), cmpopts.SortMaps(func(a, b string) bool { return a > b })) {
-					t.Errorf("encodeProperty(%v, %#v) = %#v, want %#v", test.input.key, test.input.val, string(got.Bytes()), string(test.want.Bytes()))
+					t.Errorf("encodeProperty(%v, %#v) = %#v, want %#v", test.input.key, test.input.val, got.String(), test.want.String())
 				}
 			}
 		})
@@ -216,7 +216,7 @@ func TestEncodeSection(t *testing.T) {
 				}
 
 				if !cmp.Equal(got, test.want, cmp.AllowUnexported(bytes.Buffer{})) {
-					t.Errorf("encodeSection(%v, %#v) = %#v, want %#v", test.input.key, test.input.val, string(got.Bytes()), string(test.want.Bytes()))
+					t.Errorf("encodeSection(%v, %#v) = %#v, want %#v", test.input.key, test.input.val, got.String(), test.want.String())
 				}
 			}
 		})
@@ -292,7 +292,7 @@ func TestEncode(t *testing.T) {
 				}
 
 				if !cmp.Equal(got, test.want, cmp.AllowUnexported(bytes.Buffer{})) {
-					t.Errorf("encode(%#v) = %#v, want %#v", test.input, string(got.Bytes()), string(test.want.Bytes()))
+					t.Errorf("encode(%#v) = %#v, want %#v", test.input, got.String(), test.want.String())
 				}
 			}
 		})
