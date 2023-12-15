@@ -139,7 +139,7 @@ func TestEncodeProperty(t *testing.T) {
 					t.Fatalf("encodeProperty(%v, %#v) returned %v, want %v", test.input.key, test.input.val, err, test.wantError)
 				}
 
-				if !cmp.Equal(got, test.want, cmp.AllowUnexported(bytes.Buffer{})) {
+				if !cmp.Equal(got, test.want, cmp.AllowUnexported(bytes.Buffer{}), cmpopts.SortMaps(func(a, b string) bool { return a > b })) {
 					t.Errorf("encodeProperty(%v, %#v) = %#v, want %#v", test.input.key, test.input.val, string(got.Bytes()), string(test.want.Bytes()))
 				}
 			}
