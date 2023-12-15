@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"git.sr.ht/~spc/go-ini"
+	"github.com/subpop/go-ini"
 )
 
 func ExampleMarshal() {
