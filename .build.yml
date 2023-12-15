@@ -1,9 +1,0 @@
-image: archlinux
-packages:
-  - go
-sources:
-  - https://git.sr.ht/~spc/go-ini
-tasks:
-  - test: |
-      cd go-ini
-      go test -race -v ./
