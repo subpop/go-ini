@@ -9,7 +9,13 @@ updates:
     directory: "/" # Location of go.mod and go.sum
     schedule:
       interval: "weekly"
+    commit-message:
+      prefix: "build"
+      include: "scope"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
