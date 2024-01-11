@@ -56,11 +56,11 @@ func (e *MarshalerError) Error() string {
 //
 // Examples of struct field tags and their meanings:
 //
-//   // Field appears in INI as key "myName".
-//   Field int `ini:"myName"`
+//	// Field appears in INI as key "myName".
+//	Field int `ini:"myName"`
 //
-//   // Field is ignored by this package.
-//   Field int `ini:"-"`
+//	// Field is ignored by this package.
+//	Field int `ini:"-"`
 //
 // Boolean values encode as the string literal "true" or "false".
 //
