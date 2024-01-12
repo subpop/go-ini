@@ -5,13 +5,6 @@ on:
     workflow_dispatch:
   
 jobs:
-  lint-commits:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    - uses: aevea/commitsar@v0.20.2
   lint-code:
     runs-on: ubuntu-latest
     steps:
