@@ -96,7 +96,7 @@ func Marshal(v interface{}) ([]byte, error) {
 // encode reflects on the values of rv, encoding them as INI data. If rv is not
 // a pointer to a struct, an error is returned. encode makes two passes over
 // the struct fields of rv. The first pass skips struct fields that are
-// themselve structs, encoding all struct fields as "global" INI properties.
+// themselves structs, encoding all struct fields as "global" INI properties.
 // The second pass then encodes each struct field that *is* a struct as an
 // INI section.
 func encode(buf *bytes.Buffer, rv reflect.Value) error {
