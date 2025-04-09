@@ -44,7 +44,7 @@ func ExampleMarshal() {
 	if err != nil {
 		fmt.Println("error:", err)
 	}
-	os.Stdout.Write(b)
+	_, _ = os.Stdout.Write(b)
 	// Output:
 	// Version=1.2.3
 	//
@@ -85,7 +85,7 @@ func ExampleUnmarshal() {
 	[Owner]
 	Name=John Doe
 	Organization=Acme Widgets Inc.
-	
+
 	[Database]
 	Server=192.0.2.62
 	Port=143
